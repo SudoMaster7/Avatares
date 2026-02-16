@@ -73,8 +73,15 @@ export function ImprovedAudioRecorder({
                 console.log('✅ Sending transcription:', transcription);
                 onTranscriptionComplete(transcription.trim());
             } else {
-                console.log('⚠️ No transcription received');
-                setError('Nenhum texto detectado - tente falar mais alto');
+                console.log('⚠️ No transcription received - showing recovery options');
+                
+                // Check if we had any visual transcript during recording
+                if (currentTranscript && currentTranscript.trim()) {
+                    console.log('🔄 Found current transcript, using as backup:', currentTranscript);
+                    onTranscriptionComplete(currentTranscript.trim());
+                } else {
+                    setError('Nenhum texto detectado - tente falar mais alto e mais devagar');
+                }
             }
         } catch (error) {
             console.error('❌ Transcription failed:', error);

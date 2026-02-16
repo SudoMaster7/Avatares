@@ -57,16 +57,35 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
             };
 
             recognition.onresult = (event) => {
-                let transcript = '';
+                console.log('🎯 Speech result:', event.results.length, 'results');
+                
+                let allText = '';
+                let finalText = '';
+                
+                // Capture ALL text (final + interim)
                 for (let i = 0; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    allText += transcript + ' ';
+                    
                     if (event.results[i].isFinal) {
-                        transcript += event.results[i][0].transcript;
+                        finalText += transcript + ' ';
+                        console.log('✅ Final:', transcript);
+                    } else {
+                        console.log('🔄 Interim:', transcript);
                     }
                 }
-                if (transcript) {
-                    finalTranscriptRef.current = transcript;
-                    setCurrentTranscript(transcript);
+                
+                // Always save something - prefer final, fallback to all
+                if (finalText.trim()) {
+                    finalTranscriptRef.current = finalText.trim();
+                    console.log('📝 Saved final text:', finalText.trim());
+                } else if (allText.trim()) {
+                    finalTranscriptRef.current = allText.trim();
+                    console.log('📝 Saved interim text:', allText.trim());
                 }
+                
+                // Update display
+                setCurrentTranscript(allText.trim());
             };
 
             recognition.onerror = (event) => {
@@ -95,7 +114,16 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 return;
             }
 
-            const finalText = finalTranscriptRef.current.trim();
+            // Capture text BEFORE any cleanup
+            let finalText = finalTranscriptRef.current.trim();
+            
+            // If no final text, try to get from current transcript
+            if (!finalText && currentTranscript) {
+                finalText = currentTranscript.trim();
+                console.log('📝 Using current transcript as fallback:', finalText);
+            }
+            
+            console.log('📝 Text captured before stop:', finalText);
             
             try {
                 recognitionRef.current.stop();
@@ -103,10 +131,11 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 console.error('Error stopping:', error);
             }
             
+            // Clean up AFTER capturing text
             cleanup();
             resolve(finalText || null);
         });
-    }, [isRecording, cleanup]);
+    }, [isRecording, cleanup, currentTranscript]);
 
     return {
         isRecording,
