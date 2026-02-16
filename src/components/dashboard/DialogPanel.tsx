@@ -104,7 +104,13 @@ export function DialogPanel({ avatar, subjectName, isOpen, onClose }: DialogPane
       await speak({
         text: response,
         language: avatar.language,
-        voiceName: avatar.voiceConfig.voiceName,
+        // ElevenLabs configuration
+        elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
+        elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
+        stability: avatar.voiceConfig.stability,
+        similarityBoost: avatar.voiceConfig.similarityBoost,
+        // Google TTS fallback
+        voiceName: avatar.voiceConfig.googleVoiceName,
       });
       setIsSpeaking(false);
     } catch (error) {

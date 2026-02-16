@@ -26,9 +26,11 @@ export function GamificationHUD({ streakCount = 0, newBadges = [] }: Gamificatio
     const streakBonus = calculateStreakBonus(displayStreak);
 
     useEffect(() => {
-        const id = localStorage.getItem('voice_sync_guest_id');
-        if (id) {
-            setUserName(`Aluno ${id.substring(0, 4)}`);
+        if (typeof window !== 'undefined') {
+            const id = localStorage.getItem('voice_sync_guest_id');
+            if (id) {
+                setUserName(`Aluno ${id.substring(0, 4)}`);
+            }
         }
     }, []);
 

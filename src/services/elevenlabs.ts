@@ -39,8 +39,8 @@ export async function generateSpeech(options: TTSOptions): Promise<Buffer> {
 
         return Buffer.concat(chunks);
     } catch (error) {
-        console.error('Error generating speech:', error);
-        throw new Error('Failed to generate speech');
+        console.error('Error generating speech with ElevenLabs:', error);
+        throw new Error(`ElevenLabs TTS failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

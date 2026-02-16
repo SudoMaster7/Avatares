@@ -9,7 +9,13 @@ export interface AvatarConfig {
     personality: string;
     imageUrl: string;
     voiceConfig: {
-        voiceName?: string;
+        // ElevenLabs voice configuration (preferred)
+        elevenLabsVoiceId?: string;
+        elevenLabsModelId?: string;
+        stability?: number;
+        similarityBoost?: number;
+        // Google TTS fallback configuration
+        googleVoiceName?: string;
         rate: number;
         pitch: number;
         volume: number;
@@ -42,9 +48,15 @@ Estilo de ensino:
 - Mantenha respostas em 2-3 frases`,
         imageUrl: '/avatars/prof-carlos.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-B',
-            rate: 0.9,
-            pitch: 0.9,
+            // ElevenLabs voice (animated, encouraging teacher)
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - warm, animated male
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.4,        // More varied/animated
+            similarityBoost: 0.9,  // High expressiveness
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 1.0,    // Slightly faster, more energetic
+            pitch: 1.0,   // Normal pitch
             volume: 1.0,
         },
     },
@@ -73,9 +85,15 @@ Teaching style:
 - Keep responses short (2-3 sentences)`,
         imageUrl: '/avatars/sarah.png',
         voiceConfig: {
-            voiceName: 'en-US-Wavenet-C',
-            rate: 1.0,
-            pitch: 1.2,
+            // ElevenLabs voice (enthusiastic, warm tutor)
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - friendly, warm
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.3,        // Very animated and varied
+            similarityBoost: 0.95, // Maximum expressiveness
+            // Google TTS fallback
+            googleVoiceName: 'en-US-Wavenet-C',
+            rate: 1.1,    // Energetic pace
+            pitch: 1.3,   // Higher, more cheerful pitch
             volume: 1.0,
         },
     },
@@ -104,7 +122,13 @@ Estilo de conversa:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/dom-pedro.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-B',
+            // ElevenLabs voice (more realistic)
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - deep, historical voice
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.8,
+            similarityBoost: 0.7,
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-B',
             rate: 0.85,
             pitch: 0.8,
             volume: 1.0,
@@ -135,9 +159,15 @@ Estilo:
 - Keep responses to 2-3 frases`,
         imageUrl: '/avatars/profa-mariana.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-C',
-            rate: 0.95,
-            pitch: 1.1,
+            // ElevenLabs voice (expressive, cultured literature teacher)
+            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - clear, expressive
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.5,        // Moderately varied, expressive
+            similarityBoost: 0.85, // Good expressiveness
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-C',
+            rate: 0.95,   // Thoughtful pace
+            pitch: 1.15,  // Slightly higher, more engaging
             volume: 1.0,
         },
     },
@@ -165,9 +195,15 @@ Estilo:
 - 2-3 sentence responses`,
         imageUrl: '/avatars/prof-bruno.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-B',
-            rate: 1.0,
-            pitch: 1.0,
+            // ElevenLabs voice (super enthusiastic scientist)
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - energetic, excited
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.25,       // Very animated, excited
+            similarityBoost: 0.9,  // High expressiveness
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 1.2,    // Fast, excited pace
+            pitch: 1.1,   // Higher, more energetic
             volume: 1.0,
         },
     },
@@ -195,9 +231,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/profa-sofia.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-A',
-            rate: 0.95,
-            pitch: 1.05,
+            // ElevenLabs voice (adventurous, enthusiastic geographer)
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - warm, adventurous
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.35,       // Very animated, adventurous
+            similarityBoost: 0.9,  // High expressiveness
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-A',
+            rate: 1.05,   // Energetic pace
+            pitch: 1.2,   // Higher, more exciting
             volume: 1.0,
         },
     },
@@ -225,9 +267,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/prof-lucas.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-B',
-            rate: 1.05,
-            pitch: 1.0,
+            // ElevenLabs voice (super energetic sports coach)
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - energetic, motivating
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.2,        // Maximum animation and energy
+            similarityBoost: 0.95, // Maximum motivation
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 1.2,    // Fast, energetic sports pace
+            pitch: 1.1,   // Higher, more motivating
             volume: 1.0,
         },
     },
@@ -255,9 +303,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/mestra-carolina.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-A',
-            rate: 0.95,
-            pitch: 1.15,
+            // ElevenLabs voice (creative, inspiring artist)
+            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - clear, inspiring
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.4,        // Creative and varied
+            similarityBoost: 0.85, // Artistic expressiveness
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-A',
+            rate: 0.95,   // Thoughtful, creative pace
+            pitch: 1.25,  // Higher, more inspiring
             volume: 1.0,
         },
     },
@@ -285,9 +339,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/maestro-antonio.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-C',
-            rate: 0.9,
-            pitch: 0.95,
+            // ElevenLabs voice (musical, passionate maestro)
+            elevenLabsVoiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - warm, musical
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.6,        // Balanced musicality
+            similarityBoost: 0.8,  // Musical expression
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-C',
+            rate: 0.95,   // Rhythmic, musical pace
+            pitch: 1.0,   // Natural musical tone
             volume: 1.0,
         },
     },
@@ -315,9 +375,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/socrates.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-B',
-            rate: 0.85,
-            pitch: 0.9,
+            // ElevenLabs voice (wise, philosophical Socrates)
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - deep, thoughtful
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.75,       // Consistent wisdom
+            similarityBoost: 0.7,  // Philosophical depth
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 0.85,   // Slower, contemplative pace
+            pitch: 0.9,   // Slightly lower, more thoughtful
             volume: 1.0,
         },
     },
@@ -345,10 +411,16 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/monge-tenzin.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-A',
-            rate: 0.85,
-            pitch: 0.85,
-            volume: 0.95,
+            // ElevenLabs voice (serene, wise monk)
+            elevenLabsVoiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - calm, wise
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.85,       // Very consistent, peaceful
+            similarityBoost: 0.6,  // Gentle, humble tone
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-A',
+            rate: 0.8,    // Slow, meditative pace
+            pitch: 0.85,  // Lower, more peaceful
+            volume: 0.95, // Slightly softer
         },
     },
     {
@@ -375,9 +447,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/dev-ana.png',
         voiceConfig: {
-            voiceName: 'pt-BR-Wavenet-C',
-            rate: 1.0,
-            pitch: 1.1,
+            // ElevenLabs voice (modern, tech-savvy programmer)
+            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - clear, modern
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.45,       // Dynamic, tech-friendly
+            similarityBoost: 0.85, // Professional but fun
+            // Google TTS fallback
+            googleVoiceName: 'pt-BR-Wavenet-C',
+            rate: 1.1,    // Fast, tech pace
+            pitch: 1.15,  // Higher, more energetic
             volume: 1.0,
         },
     },
@@ -405,9 +483,15 @@ Estilo:
 - Respuestas en 2-3 frases`,
         imageUrl: '/avatars/senorita-isabella.png',
         voiceConfig: {
-            voiceName: 'es-ES-Wavenet-A',
-            rate: 1.0,
-            pitch: 1.2,
+            // ElevenLabs voice (super enthusiastic Spanish tutor)
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - enthusiastic, warm
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.2,        // Very animated and expressive
+            similarityBoost: 0.95, // Maximum enthusiasm
+            // Google TTS fallback
+            googleVoiceName: 'es-ES-Wavenet-A',
+            rate: 1.15,   // Fast, energetic Spanish pace
+            pitch: 1.4,   // High, excited pitch
             volume: 1.0,
         },
     },

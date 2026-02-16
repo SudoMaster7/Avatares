@@ -11,6 +11,9 @@ import { Card } from '@/components/ui/card';
 import { Send, Volume2, Loader2, Target, Menu } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { VisualContext } from '@/components/VisualContext';
+import { AudioRecorderButton } from '@/components/AudioRecorderButton';
+import { ImprovedAudioRecorder } from '@/components/ImprovedAudioRecorder';
+import { MicrophoneSelector } from '@/components/MicrophoneSelector';
 
 import { initializeGuestSession } from '@/services/auth-service';
 import { getOrCreateConversation, saveMessage, loadConversationHistory } from '@/services/history';
@@ -35,6 +38,7 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [showVisualContext, setShowVisualContext] = useState(true);
+    const [selectedMicrophoneId, setSelectedMicrophoneId] = useState<string>('');
 
     const { trackMessageSent, trackScenarioCompleted } = useGamification();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -97,7 +101,13 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
             speak({
                 text: welcomeMessage.content,
                 language: avatar.language,
-                voiceName: avatar.voiceConfig.voiceName,
+                // ElevenLabs configuration
+                elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
+                elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
+                stability: avatar.voiceConfig.stability,
+                similarityBoost: avatar.voiceConfig.similarityBoost,
+                // Google TTS fallback
+                voiceName: avatar.voiceConfig.googleVoiceName,
             });
         };
         init();
@@ -118,24 +128,25 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSendMessage = async () => {
-        if (!input.trim() || isProcessing) return;
+    const handleSendMessage = async (messageText?: string) => {
+        const textToSend = messageText || input.trim();
+        if (!textToSend || isProcessing) return;
 
         const userMessage: Message = {
             id: Date.now().toString(),
             role: 'user',
-            content: input,
+            content: textToSend,
             timestamp: new Date(),
         };
 
         setMessages(prev => [...prev, userMessage]);
-        setInput('');
+        if (!messageText) setInput(''); // Only clear input if not from audio
         setIsProcessing(true);
         trackMessageSent(); // Award XP
 
         // Save user message
         if (conversationId) {
-            saveMessage(conversationId, input, 'student');
+            saveMessage(conversationId, textToSend, 'student');
         }
 
         try {
@@ -157,7 +168,7 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                 messages: [
                     { role: 'system', content: systemPrompt },
                     ...conversationHistory,
-                    { role: 'user', content: input },
+                    { role: 'user', content: textToSend },
                 ],
             });
 
@@ -180,7 +191,13 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
             await speak({
                 text: response,
                 language: avatar.language,
-                voiceName: avatar.voiceConfig.voiceName,
+                // ElevenLabs configuration
+                elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
+                elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
+                stability: avatar.voiceConfig.stability,
+                similarityBoost: avatar.voiceConfig.similarityBoost,
+                // Google TTS fallback
+                voiceName: avatar.voiceConfig.googleVoiceName,
             });
             setIsSpeaking(false);
         } catch (error) {
@@ -195,6 +212,28 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    const handleAudioTranscription = (transcription: string) => {
+        console.log('Audio transcription received in ConversationInterface:', transcription);
+        
+        if (!transcription || !transcription.trim()) {
+            console.warn('Empty transcription received');
+            return;
+        }
+
+        const cleanedTranscription = transcription.trim();
+        console.log('Setting input to:', cleanedTranscription);
+        
+        setInput(cleanedTranscription);
+        
+        // Automatically send the transcribed message after a short delay
+        setTimeout(() => {
+            if (cleanedTranscription) {
+                console.log('Auto-sending transcribed message:', cleanedTranscription);
+                handleSendMessage(cleanedTranscription);
+            }
+        }, 100);
     };
 
     return (
@@ -365,8 +404,30 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                                     className="flex-1 min-h-[44px] sm:min-h-[52px] max-h-[100px] sm:max-h-[120px] resize-none py-3 px-4 rounded-xl border border-gray-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-900/30 placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-white font-normal shadow-sm transition-all text-sm sm:text-base"
                                     disabled={isProcessing}
                                 />
+                                
+                                {/* Microphone Selector */}
+                                <MicrophoneSelector
+                                    onDeviceSelect={setSelectedMicrophoneId}
+                                />
+                                
+                                {/* Improved Audio Recording Button */}
+                                <ImprovedAudioRecorder
+                                    onTranscriptionComplete={handleAudioTranscription}
+                                    disabled={isProcessing}
+                                    selectedDeviceId={selectedMicrophoneId}
+                                />
+                                
+                                {/* Fallback: Original Audio Recording Button (kept for backup) */}
+                                {/*
+                                <AudioRecorderButton
+                                    onTranscriptionComplete={handleAudioTranscription}
+                                    disabled={isProcessing}
+                                    selectedDeviceId={selectedMicrophoneId}
+                                />
+                                */}
+                                
                                 <Button
-                                    onClick={handleSendMessage}
+                                    onClick={() => handleSendMessage()}
                                     disabled={!input.trim() || isProcessing}
                                     size="icon"
                                     className="h-11 w-11 sm:h-13 sm:w-13 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shrink-0 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -377,8 +438,10 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                             <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-center gap-2 font-medium">
                                 <span>🎙️ <span className="hidden sm:inline">Voz IA Ativada</span><span className="sm:hidden">Voz IA</span></span>
                                 <span className="w-1 h-1 rounded-full bg-gray-400" />
-                                <span className="hidden sm:inline">Pressione Enter para enviar</span>
-                                <span className="sm:hidden">Enter = Enviar</span>
+                                <span>📱 <span className="hidden sm:inline">Grave áudio ou digite</span><span className="sm:hidden">Áudio/Texto</span></span>
+                                <span className="w-1 h-1 rounded-full bg-gray-400" />
+                                <span className="hidden sm:inline">⚙️ Selecione o microfone</span>
+                                <span className="sm:hidden">⚙️ Mic</span>
                             </p>
                         </div>
                     </div>

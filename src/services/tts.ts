@@ -1,8 +1,70 @@
-// Client-side TTS service with Google Cloud TTS fallback
+// Client-side TTS service with ElevenLabs and Google Cloud TTS fallback
 export interface TTSOptions {
     text: string;
     language?: string;
+    // ElevenLabs options
+    elevenLabsVoiceId?: string;
+    elevenLabsModelId?: string;
+    stability?: number;
+    similarityBoost?: number;
+    // Google TTS fallback options
     voiceName?: string;
+}
+
+/**
+ * Speak text using ElevenLabs TTS (highest quality, most realistic)
+ */
+export async function speakWithElevenLabs(options: TTSOptions): Promise<void> {
+    const { 
+        text, 
+        elevenLabsVoiceId,
+        elevenLabsModelId = 'eleven_multilingual_v2',
+        stability = 0.6,
+        similarityBoost = 0.8
+    } = options;
+
+    if (!elevenLabsVoiceId) {
+        throw new Error('ElevenLabs voice ID is required');
+    }
+
+    try {
+        const response = await fetch('/api/elevenlabs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text,
+                voiceId: elevenLabsVoiceId,
+                modelId: elevenLabsModelId,
+                stability,
+                similarityBoost,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('ElevenLabs API failed');
+        }
+
+        const data = await response.json();
+
+        // Convert base64 to audio and play
+        const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        return new Promise((resolve, reject) => {
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                resolve();
+            };
+            audio.onerror = reject;
+            audio.play();
+        });
+    } catch (error) {
+        console.error('ElevenLabs TTS error:', error);
+        throw error;
+    }
 }
 
 /**
@@ -73,10 +135,25 @@ function speakWithWebSpeech(options: TTSOptions): Promise<void> {
 }
 
 /**
- * Main speak function (tries Google TTS first)
+ * Main speak function (tries ElevenLabs first, then Google TTS, then Web Speech)
  */
 export async function speak(options: TTSOptions): Promise<void> {
-    return speakWithGoogleTTS(options);
+    // Try ElevenLabs first if voice ID is provided
+    if (options.elevenLabsVoiceId) {
+        try {
+            return await speakWithElevenLabs(options);
+        } catch (error) {
+            console.warn('ElevenLabs failed, falling back to Google TTS:', error);
+        }
+    }
+    
+    // Fallback to Google TTS
+    try {
+        return await speakWithGoogleTTS(options);
+    } catch (error) {
+        console.warn('Google TTS failed, falling back to Web Speech:', error);
+        return speakWithWebSpeech(options);
+    }
 }
 
 /**

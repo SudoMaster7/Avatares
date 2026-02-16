@@ -21,49 +21,52 @@ export function useGamification() {
     useEffect(() => {
         const loadStats = async () => {
             // 1. Try local storage first (faster)
-            const saved = localStorage.getItem('avatar_user_stats');
+            const saved = typeof window !== 'undefined' ? localStorage.getItem('avatar_user_stats') : null;
             if (saved) {
                 setStats(JSON.parse(saved));
             }
 
-            // 2. Try Supabase if user exists
-            const userId = getCurrentUserId();
-            if (userId) {
-                const { data } = await supabase
-                    .from('student_profiles')
-                    .select('total_points')
-                    .eq('user_id', userId)
-                    .single();
+            // 2. Try Supabase if user exists - DISABLED until database is set up
+            // const userId = getCurrentUserId();
+            // if (userId) {
+            //     const { data } = await supabase
+            //         .from('student_profiles')
+            //         .select('total_points')
+            //         .eq('user_id', userId)
+            //         .single();
 
-                if (data) {
-                    // Start with server XP if local is missing or lower (simple sync conflict resolution)
-                    // Ideally we'd merge, but for now server wins if local is empty
-                    if (!saved) {
-                        setStats(prev => calculateStatsFromXP(data.total_points));
-                    }
-                }
-            }
+            //     if (data) {
+            //         // Start with server XP if local is missing or lower (simple sync conflict resolution)
+            //         // Ideally we'd merge, but for now server wins if local is empty
+            //         if (!saved) {
+            //             setStats(prev => calculateStatsFromXP(data.total_points));
+            //         }
+            //     }
+            // }
         };
         loadStats();
     }, []);
 
     // Save to localStorage AND Supabase on change
     useEffect(() => {
-        localStorage.setItem('avatar_user_stats', JSON.stringify(stats));
-
-        const userId = getCurrentUserId();
-        if (userId) {
-            // Updates Supabase directly (debounce could be added for optimization)
-            supabase.from('student_profiles')
-                .upsert({
-                    user_id: userId,
-                    total_points: stats.xp,
-                    // We would map other fields if schema supported them
-                }, { onConflict: 'user_id' })
-                .then(({ error }) => {
-                    if (error) console.error('Error syncing XP:', error);
-                });
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('avatar_user_stats', JSON.stringify(stats));
         }
+
+        // DISABLED until database is set up
+        // const userId = getCurrentUserId();
+        // if (userId) {
+        //     // Updates Supabase directly (debounce could be added for optimization)
+        //     supabase.from('student_profiles')
+        //         .upsert({
+        //             user_id: userId,
+        //             total_points: stats.xp,
+        //             // We would map other fields if schema supported them
+        //         }, { onConflict: 'user_id' })
+        //         .then(({ error }) => {
+        //             if (error) console.error('Error syncing XP:', error);
+        //         });
+        // }
     }, [stats]);
 
     // Helper to reconstruct stats from just XP (since schema is limited)
