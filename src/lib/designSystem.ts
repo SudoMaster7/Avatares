@@ -1,0 +1,193 @@
+/**
+ * Design System - Temas por matéria
+ * Define cores, gradientes, padrões e estilos únicos para cada matéria
+ */
+
+export const SUBJECT_THEMES = {
+  'matematica': {
+    name: 'Matemática',
+    emoji: '🔢',
+    colors: {
+      primary: '#FF6B6B',
+      light: '#FFE5E5',
+      dark: '#C92A2A',
+      gradient: 'from-red-400 via-red-500 to-red-600',
+    },
+    pattern: 'grid',
+    icon: '📐',
+    accentColor: '#FF6B6B',
+    glowColor: 'rgba(255, 107, 107, 0.5)',
+  },
+  'portugues': {
+    name: 'Português',
+    emoji: '📖',
+    colors: {
+      primary: '#4ECDC4',
+      light: '#E0F7F6',
+      dark: '#0A8F83',
+      gradient: 'from-teal-400 via-teal-500 to-teal-600',
+    },
+    pattern: 'lines',
+    icon: '✍️',
+    accentColor: '#4ECDC4',
+    glowColor: 'rgba(78, 205, 196, 0.5)',
+  },
+  'ciencias': {
+    name: 'Ciências',
+    emoji: '🔬',
+    colors: {
+      primary: '#45B7D1',
+      light: '#E3F5FF',
+      dark: '#0A5F8F',
+      gradient: 'from-blue-400 via-blue-500 to-blue-600',
+    },
+    pattern: 'molecules',
+    icon: '⚗️',
+    accentColor: '#45B7D1',
+    glowColor: 'rgba(69, 183, 209, 0.5)',
+  },
+  'historia': {
+    name: 'História',
+    emoji: '📜',
+    colors: {
+      primary: '#A67C52',
+      light: '#F5E6D3',
+      dark: '#6B4423',
+      gradient: 'from-amber-600 via-amber-700 to-amber-800',
+    },
+    pattern: 'scroll',
+    icon: '🏛️',
+    accentColor: '#A67C52',
+    glowColor: 'rgba(166, 124, 82, 0.5)',
+  },
+  'geografia': {
+    name: 'Geografia',
+    emoji: '🌍',
+    colors: {
+      primary: '#26C485',
+      light: '#E6F9F2',
+      dark: '#0D7D5A',
+      gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
+    },
+    pattern: 'map',
+    icon: '🗺️',
+    accentColor: '#26C485',
+    glowColor: 'rgba(38, 196, 133, 0.5)',
+  },
+  'ingles': {
+    name: 'Inglês',
+    emoji: '🇬🇧',
+    colors: {
+      primary: '#5B21B6',
+      light: '#F3E8FF',
+      dark: '#2E1065',
+      gradient: 'from-purple-500 via-purple-600 to-purple-700',
+    },
+    pattern: 'language',
+    icon: '💬',
+    accentColor: '#5B21B6',
+    glowColor: 'rgba(91, 33, 182, 0.5)',
+  },
+  'educacao-fisica': {
+    name: 'Educação Física',
+    emoji: '⚽',
+    colors: {
+      primary: '#F77F00',
+      light: '#FFE5CC',
+      dark: '#B85C00',
+      gradient: 'from-orange-400 via-orange-500 to-orange-600',
+    },
+    pattern: 'sports',
+    icon: '🏃',
+    accentColor: '#F77F00',
+    glowColor: 'rgba(247, 127, 0, 0.5)',
+  },
+  'arte': {
+    name: 'Arte',
+    emoji: '🎨',
+    colors: {
+      primary: '#E91E63',
+      light: '#FCE4EC',
+      dark: '#880E4F',
+      gradient: 'from-pink-400 via-pink-500 to-pink-600',
+    },
+    pattern: 'paint',
+    icon: '🖌️',
+    accentColor: '#E91E63',
+    glowColor: 'rgba(233, 30, 99, 0.5)',
+  },
+  'musica': {
+    name: 'Música',
+    emoji: '🎵',
+    colors: {
+      primary: '#9C27B0',
+      light: '#F3E5F5',
+      dark: '#6A1B9A',
+      gradient: 'from-fuchsia-400 via-fuchsia-500 to-fuchsia-600',
+    },
+    pattern: 'notes',
+    icon: '🎼',
+    accentColor: '#9C27B0',
+    glowColor: 'rgba(156, 39, 176, 0.5)',
+  },
+  'filosofia': {
+    name: 'Filosofia',
+    emoji: '🤔',
+    colors: {
+      primary: '#7C3AED',
+      light: '#EDE9FE',
+      dark: '#4C1D95',
+      gradient: 'from-violet-400 via-violet-500 to-violet-600',
+    },
+    pattern: 'thinking',
+    icon: '💭',
+    accentColor: '#7C3AED',
+    glowColor: 'rgba(124, 58, 237, 0.5)',
+  },
+  'religiao-etica': {
+    name: 'Religião/Ética',
+    emoji: '☮️',
+    colors: {
+      primary: '#06B6D4',
+      light: '#ECFDFD',
+      dark: '#0E5B6F',
+      gradient: 'from-cyan-400 via-cyan-500 to-cyan-600',
+    },
+    pattern: 'harmony',
+    icon: '🙏',
+    accentColor: '#06B6D4',
+    glowColor: 'rgba(6, 182, 212, 0.5)',
+  },
+  'informatica': {
+    name: 'Informática',
+    emoji: '💻',
+    colors: {
+      primary: '#0F766E',
+      light: '#CCFBF1',
+      dark: '#134E4A',
+      gradient: 'from-teal-500 via-teal-600 to-teal-700',
+    },
+    pattern: 'code',
+    icon: '⌨️',
+    accentColor: '#0F766E',
+    glowColor: 'rgba(15, 118, 110, 0.5)',
+  },
+  'espanhol': {
+    name: 'Espanhol',
+    emoji: '🇪🇸',
+    colors: {
+      primary: '#EC4899',
+      light: '#FCE7F3',
+      dark: '#831843',
+      gradient: 'from-rose-400 via-rose-500 to-rose-600',
+    },
+    pattern: 'fiesta',
+    icon: '🎭',
+    accentColor: '#EC4899',
+    glowColor: 'rgba(236, 72, 153, 0.5)',
+  },
+};
+
+export function getSubjectTheme(subjectId: string) {
+  return (SUBJECT_THEMES as any)[subjectId] || SUBJECT_THEMES['matematica'];
+}

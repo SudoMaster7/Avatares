@@ -1,65 +1,335 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { AVATARS, AvatarConfig, getAvatarBySubjectId } from '@/lib/avatars';
+import { SUBJECTS } from '@/lib/subjects';
+import { Scenario } from '@/lib/scenarios';
+import { StudentDashboard } from '@/components/dashboard';
+import { AvatarCard } from '@/components/AvatarCard';
+import { ConversationInterface } from '@/components/ConversationInterface';
+import { ScenarioSelector } from '@/components/ScenarioSelector';
+import { GamificationHUD } from '@/components/GamificationHUD';
+import { ChallengeArena } from '@/components/ChallengeArena';
+import { UserMenu } from '@/components/UserMenu';
+import { DarkModeToggle } from '@/components/DarkModeToggle';
+import { GraduationCap, Sparkles, Brain, Zap, Volume2, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
+
+type ViewMode = 'dashboard' | 'home' | 'conversation' | 'scenarios' | 'arena';
 
 export default function Home() {
+  const [viewMode, setViewMode] = useState<ViewMode>('home');
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarConfig | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+
+  // Dashboard view
+  if (viewMode === 'dashboard') {
+    return (
+      <StudentDashboard 
+        onNavigateTo={(view, subjectId) => {
+          if (view === 'avatars') {
+            setViewMode('home');
+          } else if (view === 'mini-games') {
+            setViewMode('scenarios');
+          } else if (view === 'conversation' && subjectId) {
+            const avatar = getAvatarBySubjectId(subjectId);
+            if (avatar) {
+              setSelectedAvatar(avatar);
+              setViewMode('conversation');
+            }
+          }
+        }}
+      />
+    );
+  }
+
+  // Conversation view
+  if (viewMode === 'conversation' && selectedAvatar) {
+    return (
+      <ConversationInterface
+        avatar={selectedAvatar}
+        scenario={selectedScenario}
+        onBack={() => {
+          setViewMode('home');
+          setSelectedAvatar(null);
+          setSelectedScenario(null);
+        }}
+      />
+    );
+  }
+
+  // Scenario selection view
+  if (viewMode === 'scenarios' && selectedAvatar) {
+    return (
+      <ScenarioSelector
+        avatar={selectedAvatar}
+        onSelectScenario={(scenario) => {
+          setSelectedScenario(scenario);
+          setViewMode('conversation');
+        }}
+        onBack={() => {
+          setViewMode('home');
+          setSelectedAvatar(null);
+        }}
+      />
+    );
+  }
+
+  // Challenge Arena view
+  if (viewMode === 'arena') {
+    return <ChallengeArena onBack={() => setViewMode('home')} />;
+  }
+
+  // Home view - Landing Page with Dashboard Style
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Animated Background Blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute -top-40 -left-40 w-80 h-80 bg-blue-300 rounded-full opacity-10 blur-3xl"
+          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+          transition={{ duration: 8, repeat: Infinity }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+        <motion.div
+          className="absolute -bottom-40 -right-40 w-80 h-80 bg-purple-300 rounded-full opacity-10 blur-3xl"
+          animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
+          transition={{ duration: 10, repeat: Infinity }}
+        />
+      </div>
+
+      {/* Header */}
+      <div className="relative z-20 sticky top-0 bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl border-b border-white/20 dark:border-slate-700/20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <motion.div 
+              className="flex items-center gap-2 sm:gap-3 min-w-0"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <GraduationCap className="w-5 sm:w-7 h-5 sm:h-7 text-white" />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-lg sm:text-2xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                  Avatares Educacionais
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  Aprenda interagindo com mentores IA especializados 🤖
+                </p>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              className="flex gap-1 sm:gap-3 items-center"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
             >
-              Learning
-            </a>{" "}
-            center.
+              <DarkModeToggle />
+              <Button
+                className="hidden sm:flex bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg text-sm"
+                onClick={() => setViewMode('dashboard')}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button
+                className="sm:hidden bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg px-3 py-2 h-auto text-xs"
+                onClick={() => setViewMode('dashboard')}
+              >
+                <Sparkles className="w-4 h-4" />
+              </Button>
+              <UserMenu />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        {/* Hero Section */}
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <motion.div 
+            className="inline-flex items-center gap-2 bg-blue-100/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full text-sm font-semibold mb-6 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+          >
+            <Zap className="w-4 h-4" />
+            100% Gratuito
+          </motion.div>
+
+          <motion.h2 
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+              Bem-vindo ao AvatarES!
+            </span>
+            {' '}
+            <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl">🎓</span>
+          </motion.h2>
+
+          <motion.p 
+            className="text-base sm:text-lg md:text-xl text-gray-700 dark:text-gray-400 max-w-3xl mx-auto mb-8 px-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            Aprenda com mentores especializados em inteligência artificial. Escolha entre {SUBJECTS.length} matérias diferentes, pratique em cenários reais e desenvolva suas habilidades de forma divertida e interativa!
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-2xl text-lg px-8 py-6 rounded-full"
+              onClick={() => setViewMode('dashboard')}
+            >
+              <Trophy className="w-5 h-5 mr-2" />
+              Acessar Dashboard
+            </Button>
+          </motion.div>
+        </motion.div>
+
+        {/* Features Grid */}
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12 sm:mb-16 px-2 sm:px-0"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          {[
+            {
+              icon: Brain,
+              title: '13 Matérias Completas',
+              description: 'Matemática, Português, Ciências, História, Geografia, Inglês e mais!',
+              color: 'from-blue-400 to-blue-600',
+              bgColor: 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/30'
+            },
+            {
+              icon: Volume2,
+              title: 'Vozes Premium',
+              description: 'Vozes naturais em português e inglês para melhor aprendizado',
+              color: 'from-purple-400 to-purple-600',
+              bgColor: 'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30'
+            },
+            {
+              icon: Sparkles,
+              title: 'IA Inteligente',
+              description: 'Respostas rápidas e contextualizadas para personalizar seu aprendizado',
+              color: 'from-pink-400 to-pink-600',
+              bgColor: 'from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-900/30'
+            }
+          ].map((feature, idx) => (
+            <motion.div
+              key={idx}
+              className={`bg-gradient-to-br ${feature.bgColor} rounded-xl sm:rounded-2xl p-6 sm:p-8 border border-white/40 dark:border-slate-700/40 backdrop-blur-sm`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 + idx * 0.1 }}
+              whileHover={{ y: -8 }}
+            >
+              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4`}>
+                <feature.icon className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2">
+                {feature.title}
+              </h3>
+              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">
+                {feature.description}
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Avatars Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white mb-2">
+              Escolha seu Mentor 👨‍🏫
+            </h2>
+            <p className="text-base sm:text-lg text-gray-700 dark:text-gray-400 px-2 sm:px-0">
+              {SUBJECTS.length} avatares especializados esperando por você
+            </p>
+          </div>
+
+          <div className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/20 dark:border-slate-700/20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {AVATARS.map((avatar, idx) => (
+                <motion.div
+                  key={avatar.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 + idx * 0.05 }}
+                >
+                  <AvatarCard
+                    avatar={avatar}
+                    onSelect={(avatar) => {
+                      setSelectedAvatar(avatar);
+                      setViewMode('conversation');
+                    }}
+                    onSelectScenario={(avatar) => {
+                      setSelectedAvatar(avatar);
+                      setViewMode('scenarios');
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* CTA Section */}
+        <motion.div
+          className="mt-12 sm:mt-16 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center text-white shadow-2xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9 }}
+          whileHover={{ scale: 1.02 }}
+        >
+          <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 px-2">
+            Pronto para começar sua jornada educacional? 🚀
+          </h3>
+          <p className="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 px-2">
+            Acesse o dashboard para explorar todas as matérias, mini-games e ganhar pontos!
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Button
+            size="lg"
+            className="bg-white text-indigo-600 hover:bg-gray-100 text-lg font-bold px-8 py-6"
+            onClick={() => setViewMode('dashboard')}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            Acessar Dashboard Agora
+          </Button>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          className="mt-12 sm:mt-16 text-center px-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+        >
+          <div className="bg-blue-100/60 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700/50 rounded-lg p-4 inline-block backdrop-blur-sm">
+            <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 font-medium">
+              ⚠️ <strong>Versão MVP</strong> - Esta é uma versão de demonstração inicial. Mais funcionalidades em breve!
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    </main>
   );
 }
