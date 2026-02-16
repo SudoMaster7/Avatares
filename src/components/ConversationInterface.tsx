@@ -38,7 +38,6 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [showVisualContext, setShowVisualContext] = useState(true);
-    const [selectedMicrophoneId, setSelectedMicrophoneId] = useState<string>('');
 
     const { trackMessageSent, trackScenarioCompleted } = useGamification();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -401,16 +400,10 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                                     disabled={isProcessing}
                                 />
                                 
-                                {/* Microphone Selector */}
-                                <MicrophoneSelector
-                                    onDeviceSelect={setSelectedMicrophoneId}
-                                />
-                                
-                                {/* Improved Audio Recording Button */}
+                                {/* Audio Recording Button */}
                                 <ImprovedAudioRecorder
                                     onTranscriptionComplete={handleAudioTranscription}
                                     disabled={isProcessing}
-                                    selectedDeviceId={selectedMicrophoneId}
                                 />
                                 
                                 {/* Fallback: Original Audio Recording Button (kept for backup) */}

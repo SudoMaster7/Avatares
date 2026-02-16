@@ -43,7 +43,15 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
     }, []);
 
     const startRecording = useCallback(() => {
-        if (!isSupported || isRecording) return;
+        if (!isSupported) {
+            console.error('❌ Browser does not support speech recognition');
+            return;
+        }
+        
+        if (isRecording) {
+            console.warn('⚠️ Already recording');
+            return;
+        }
 
         // Clean up any existing recognition first
         cleanup();
@@ -52,18 +60,26 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
         finalTranscriptRef.current = '';
         setCurrentTranscript('');
         
+        console.log('🚀 Starting speech recognition...');
+        
         try {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
             
-            // Configure recognition
+            // Configure recognition for longer, more reliable recording
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'pt-BR';
             recognition.maxAlternatives = 1;
+            
+            // Add longer timeout for mobile devices
+            if ('webkitSpeechRecognition' in window) {
+                // Chrome/Safari mobile - give more time
+                (recognition as any).serviceURI = null; // Let browser decide
+            }
 
             recognition.addEventListener('start', () => {
-                console.log('🎤 Recording started');
+                console.log('🎤 Recording started successfully');
                 setIsRecording(true);
                 startTimeRef.current = Date.now();
 
@@ -91,7 +107,7 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 // Store only final transcript in ref
                 if (finalTranscript) {
                     finalTranscriptRef.current = finalTranscript;
-                    console.log('✅ Final transcript:', finalTranscript);
+                    console.log('✅ Final transcript updated:', finalTranscript);
                 }
 
                 // Show final + interim for real-time feedback
@@ -107,17 +123,23 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 if (errorEvent.error === 'no-speech') {
                     errorMessage = 'Nenhuma fala detectada';
                 } else if (errorEvent.error === 'not-allowed') {
-                    errorMessage = 'Permissão negada';
+                    errorMessage = 'Permissão de microfone negada';
                 } else if (errorEvent.error === 'network') {
                     errorMessage = 'Erro de conexão';
                 }
                 
                 setCurrentTranscript(errorMessage);
-                setTimeout(cleanup, 2000);
+                // Don't immediately cleanup on mobile - wait longer
+                setTimeout(() => {
+                    if (errorEvent.error !== 'aborted') { // Don't cleanup if user manually stopped
+                        cleanup();
+                        setCurrentTranscript('');
+                    }
+                }, 5000); // Increased from 3000ms to 5000ms
             });
 
             recognition.addEventListener('end', () => {
-                console.log('🛑 Recording ended');
+                console.log('🛑 Recognition ended naturally');
                 if (durationIntervalRef.current) {
                     clearInterval(durationIntervalRef.current);
                     durationIntervalRef.current = null;
@@ -127,10 +149,26 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
             });
 
             recognitionRef.current = recognition;
-            recognition.start();
+            
+            // Start immediately without delay for better user experience
+            try {
+                recognition.start();
+                console.log('🚀 Recognition started immediately');
+            } catch (startError) {
+                console.error('❌ Error starting recognition:', startError);
+                // Try once more after a tiny delay
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                    } catch (retryError) {
+                        console.error('❌ Retry failed:', retryError);
+                        cleanup();
+                    }
+                }, 50);
+            }
             
         } catch (error) {
-            console.error('❌ Failed to start recording:', error);
+            console.error('❌ Failed to create speech recognition:', error);
             cleanup();
         }
     }, [isSupported, isRecording, cleanup]);
@@ -143,23 +181,52 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
             }
 
             const recognition = recognitionRef.current;
+            let resolved = false;
             
-            // Give a moment for final results then stop
-            setTimeout(() => {
+            // Set up event listener for when recognition actually ends
+            const onEnd = () => {
+                if (resolved) return;
+                resolved = true;
+                
                 const finalText = finalTranscriptRef.current.trim();
-                console.log('📝 Stopping - Final text:', finalText);
+                console.log('🏁 Recognition ended - Final text:', finalText);
                 
-                try {
-                    recognition.stop();
-                } catch (error) {
-                    console.error('Error stopping recognition:', error);
-                }
-                
-                // Clean up and resolve
                 cleanup();
                 setCurrentTranscript(''); // Clear display
                 resolve(finalText || null);
-            }, 300);
+            };
+            
+            recognition.addEventListener('end', onEnd, { once: true });
+            
+            try {
+                // Give much more time for final results to come in before stopping
+                setTimeout(() => {
+                    const finalText = finalTranscriptRef.current.trim();
+                    console.log('📝 Stopping - Final text before stop:', finalText);
+                    
+                    if (finalText && finalText.length > 3) {
+                        // We have substantial text, stop soon
+                        setTimeout(() => recognition.stop(), 500);
+                    } else {
+                        // Wait much longer for results, then force stop
+                        setTimeout(() => recognition.stop(), 2000);
+                    }
+                }, 1500); // Increased from 800ms to 1.5s
+                
+                // Much longer safety timeout
+                setTimeout(() => {
+                    if (!resolved) {
+                        console.log('⏰ Safety timeout triggered after 8 seconds');
+                        onEnd();
+                    }
+                }, 8000); // Increased from 3s to 8s
+                
+            } catch (error) {
+                console.error('Error stopping recognition:', error);
+                if (!resolved) {
+                    onEnd();
+                }
+            }
         });
     }, [isRecording, cleanup]);
 

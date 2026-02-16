@@ -11,14 +11,12 @@ interface ImprovedAudioRecorderProps {
     onTranscriptionComplete: (text: string) => void;
     disabled?: boolean;
     className?: string;
-    selectedDeviceId?: string;
 }
 
 export function ImprovedAudioRecorder({ 
     onTranscriptionComplete, 
     disabled,
-    className,
-    selectedDeviceId
+    className
 }: ImprovedAudioRecorderProps) {
     const [showRecording, setShowRecording] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -43,24 +41,31 @@ export function ImprovedAudioRecorder({
     const handleStartRecording = async () => {
         try {
             setError(null);
-            console.log('Initiating recording...');
-            await startRecording();
+            console.log('🎤 Starting recording...');
+            
+            // Check browser support first
+            if (!isSupported) {
+                throw new Error('Seu navegador não suporta gravação de áudio');
+            }
+            
+            startRecording();
             setShowRecording(true);
-            console.log('Recording started successfully');
+            console.log('✅ Recording interface shown');
         } catch (error) {
-            console.error('Failed to start recording:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao iniciar gravação';
+            console.error('❌ Failed to start recording:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Erro ao iniciar gravação';
             setError(errorMessage);
-            alert(errorMessage);
+            setShowRecording(false); // Make sure we don't show recording UI on error
         }
     };
 
     const handleStopRecording = async () => {
         try {
-            console.log('🛑 User stopping recording...');
+            console.log('🛑 User manually stopping recording...');
             const transcription = await stopRecording();
             console.log('📝 Transcription result:', transcription);
             
+            // Always close recording UI when user clicks stop
             setShowRecording(false);
             setError(null);
             
@@ -68,7 +73,8 @@ export function ImprovedAudioRecorder({
                 console.log('✅ Sending transcription:', transcription);
                 onTranscriptionComplete(transcription.trim());
             } else {
-                setError('Nenhum texto detectado');
+                console.log('⚠️ No transcription received');
+                setError('Nenhum texto detectado - tente falar mais alto');
             }
         } catch (error) {
             console.error('❌ Transcription failed:', error);
@@ -141,7 +147,7 @@ export function ImprovedAudioRecorder({
                 {/* Visual instruction and real-time transcript */}
                 <div className="space-y-1">
                     <div className="text-xs text-red-600 dark:text-red-400 text-center">
-                        🎤 Fale agora... Sua voz será transcrita automaticamente
+                        🎤 Gravando... Fale normalmente. O botão só para quando você clicar PARAR
                     </div>
                     {currentTranscript && (
                         <div className="text-xs text-gray-600 dark:text-gray-400 bg-white/50 dark:bg-black/20 rounded px-2 py-1 max-w-full overflow-hidden">
