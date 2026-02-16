@@ -147,7 +147,7 @@ export function ImprovedAudioRecorder({
                 {/* Visual instruction and real-time transcript */}
                 <div className="space-y-1">
                     <div className="text-xs text-red-600 dark:text-red-400 text-center">
-                        🎤 Gravando... Fale normalmente. O botão só para quando você clicar PARAR
+                        🎤 Fale agora... Sua voz será transcrita automaticamente
                     </div>
                     {currentTranscript && (
                         <div className="text-xs text-gray-600 dark:text-gray-400 bg-white/50 dark:bg-black/20 rounded px-2 py-1 max-w-full overflow-hidden">
