@@ -61,15 +61,16 @@ export function useAudioRecorder(): UseAudioRecorderResult {
             recognition.maxAlternatives = 1;
 
             // Handle results
-            recognition.onresult = (event) => {
-                console.log('Speech recognition result:', event);
+            recognition.addEventListener('result', (event) => {
+                const speechEvent = event as unknown as SpeechRecognitionEvent;
+                console.log('Speech recognition result:', speechEvent);
                 let finalTranscript = '';
                 let interimTranscript = '';
 
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    console.log(`Result ${i}: ${transcript} (final: ${event.results[i].isFinal})`);
-                    if (event.results[i].isFinal) {
+                for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i++) {
+                    const transcript = speechEvent.results[i][0].transcript;
+                    console.log(`Result ${i}: ${transcript} (final: ${speechEvent.results[i].isFinal})`);
+                    if (speechEvent.results[i].isFinal) {
                         finalTranscript += transcript;
                     } else {
                         interimTranscript += transcript;
@@ -79,41 +80,42 @@ export function useAudioRecorder(): UseAudioRecorderResult {
                 const currentTranscript = finalTranscript || interimTranscript;
                 transcriptionRef.current = currentTranscript;
                 console.log('Current transcription:', currentTranscript);
-            };
+            });
 
             // Handle errors
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error, event);
+            recognition.addEventListener('error', (event) => {
+                const errorEvent = event as unknown as SpeechRecognitionErrorEvent;
+                console.error('Speech recognition error:', errorEvent.error, errorEvent);
                 setIsRecording(false);
                 setIsTranscribing(false);
                 
                 let errorMessage = 'Erro na gravação. Tente novamente.';
                 
-                if (event.error === 'no-speech') {
+                if (errorEvent.error === 'no-speech') {
                     errorMessage = 'Nenhum áudio detectado. Tente falar mais alto.';
-                } else if (event.error === 'not-allowed') {
+                } else if (errorEvent.error === 'not-allowed') {
                     errorMessage = 'Permissão de microfone negada. Permita acesso ao microfone.';
-                } else if (event.error === 'network') {
+                } else if (errorEvent.error === 'network') {
                     errorMessage = 'Erro de rede. Verifique sua conexão.';
-                } else if (event.error === 'aborted') {
+                } else if (errorEvent.error === 'aborted') {
                     errorMessage = 'Gravação cancelada.';
                 }
                 
                 transcriptionRef.current = errorMessage;
-            };
+            });
 
             // Add event handlers for better debugging
-            recognition.onstart = () => {
+            recognition.addEventListener('start', () => {
                 console.log('Speech recognition started');
                 setIsRecording(true);
-            };
+            });
 
-            recognition.onend = () => {
+            recognition.addEventListener('end', () => {
                 console.log('Speech recognition ended');
                 if (isRecording) {
                     setIsRecording(false);
                 }
-            };
+            });
 
             // Start recognition
             console.log('Starting speech recognition...');
@@ -140,13 +142,13 @@ export function useAudioRecorder(): UseAudioRecorderResult {
 
             const recognition = recognitionRef.current;
 
-            recognition.onend = () => {
+            recognition.addEventListener('end', () => {
                 cleanup();
                 setIsTranscribing(false);
                 
                 const finalText = transcriptionRef.current.trim();
                 resolve(finalText || null);
-            };
+            });
 
             // Simulate transcribing state for better UX
             setIsTranscribing(true);

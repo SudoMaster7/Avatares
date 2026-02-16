@@ -109,8 +109,6 @@ export function DialogPanel({ avatar, subjectName, isOpen, onClose }: DialogPane
         elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
         stability: avatar.voiceConfig.stability,
         similarityBoost: avatar.voiceConfig.similarityBoost,
-        // Google TTS fallback
-        voiceName: avatar.voiceConfig.googleVoiceName,
       });
       setIsSpeaking(false);
     } catch (error) {

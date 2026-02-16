@@ -26,14 +26,11 @@ export function ImprovedAudioRecorder({
     
     const {
         isRecording,
-        isTranscribing,
         recordingDuration,
         currentTranscript,
         startRecording,
         stopRecording,
-        cancelRecording,
-        isAvailable,
-        serviceInfo,
+        isSupported,
     } = useSimpleRecorder();
 
     // Update last transcription when current changes
@@ -47,7 +44,7 @@ export function ImprovedAudioRecorder({
         try {
             setError(null);
             console.log('Initiating recording...');
-            await startRecording(selectedDeviceId);
+            await startRecording();
             setShowRecording(true);
             console.log('Recording started successfully');
         } catch (error) {
@@ -104,9 +101,9 @@ export function ImprovedAudioRecorder({
         }
     };
 
-    const handleCancelRecording = () => {
+    const handleCancelRecording = async () => {
         console.log('Recording cancelled');
-        cancelRecording();
+        await stopRecording(); // Just stop, don't process the result
         setShowRecording(false);
         setError(null);
     };
@@ -119,21 +116,11 @@ export function ImprovedAudioRecorder({
     };
 
     // Show service unavailable state
-    if (!isAvailable) {
+    if (!isSupported) {
         return (
             <div className={cn("flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-3 py-2 rounded-xl border border-orange-200 dark:border-orange-800", className)}>
                 <AlertCircle className="w-4 h-4" />
                 <span className="text-sm">Microfone não disponível</span>
-            </div>
-        );
-    }
-
-    // Show transcribing state
-    if (isTranscribing) {
-        return (
-            <div className={cn("flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-2 rounded-xl border border-blue-200 dark:border-blue-800", className)}>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm font-medium">Transcrevendo...</span>
             </div>
         );
     }
@@ -262,14 +249,14 @@ export function ImprovedAudioRecorder({
     return (
         <Button
             onClick={handleStartRecording}
-            disabled={disabled || !isAvailable}
+            disabled={disabled || !isSupported}
             size="icon"
             variant="outline"
             className={cn(
                 "h-11 w-11 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 hover:border-red-400 dark:hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group",
                 className
             )}
-            title={`Gravar áudio (${serviceInfo})`}
+            title="Gravar áudio"
         >
             <Mic className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors" />
         </Button>

@@ -106,8 +106,6 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                 elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
                 stability: avatar.voiceConfig.stability,
                 similarityBoost: avatar.voiceConfig.similarityBoost,
-                // Google TTS fallback
-                voiceName: avatar.voiceConfig.googleVoiceName,
             });
         };
         init();
@@ -196,8 +194,6 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                 elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
                 stability: avatar.voiceConfig.stability,
                 similarityBoost: avatar.voiceConfig.similarityBoost,
-                // Google TTS fallback
-                voiceName: avatar.voiceConfig.googleVoiceName,
             });
             setIsSpeaking(false);
         } catch (error) {

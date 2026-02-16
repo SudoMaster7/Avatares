@@ -1,4 +1,4 @@
-// Client-side TTS service with ElevenLabs and Google Cloud TTS fallback
+// Client-side TTS service optimized for Vercel deployment
 export interface TTSOptions {
     text: string;
     language?: string;
@@ -7,8 +7,33 @@ export interface TTSOptions {
     elevenLabsModelId?: string;
     stability?: number;
     similarityBoost?: number;
-    // Google TTS fallback options
-    voiceName?: string;
+}
+
+/**
+ * Main TTS function - uses ElevenLabs with Web Speech fallback
+ */
+export async function speak(options: TTSOptions): Promise<void> {
+    const { text, elevenLabsVoiceId } = options;
+    
+    if (!text || text.trim().length === 0) {
+        console.warn('Empty text provided to TTS service');
+        return;
+    }
+
+    // Try ElevenLabs first if voice ID is provided
+    if (elevenLabsVoiceId) {
+        try {
+            console.log('Using ElevenLabs TTS');
+            await speakWithElevenLabs(options);
+            return;
+        } catch (error) {
+            console.warn('ElevenLabs failed, falling back to Web Speech:', error);
+        }
+    }
+    
+    // Fallback to Web Speech API
+    console.log('Using Web Speech API');
+    await speakWithWebSpeech(options);
 }
 
 /**
@@ -19,8 +44,8 @@ export async function speakWithElevenLabs(options: TTSOptions): Promise<void> {
         text, 
         elevenLabsVoiceId,
         elevenLabsModelId = 'eleven_multilingual_v2',
-        stability = 0.6,
-        similarityBoost = 0.8
+        stability = 0.6, // Para vozes mais animadas
+        similarityBoost = 0.8 // Para características únicas
     } = options;
 
     if (!elevenLabsVoiceId) {
@@ -68,113 +93,83 @@ export async function speakWithElevenLabs(options: TTSOptions): Promise<void> {
 }
 
 /**
- * Speak text using Google Cloud TTS (premium quality)
+ * Web Speech API fallback (built into browsers)
  */
-export async function speakWithGoogleTTS(options: TTSOptions): Promise<void> {
-    const { text, language = 'pt-BR', voiceName } = options;
-
-    try {
-        const response = await fetch('/api/tts', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                text,
-                language,
-                voiceName,
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error('TTS API failed');
-        }
-
-        const data = await response.json();
-
-        // Convert base64 to audio and play
-        const audioBlob = base64ToBlob(data.audio, 'audio/mp3');
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-
-        return new Promise((resolve, reject) => {
-            audio.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-                resolve();
-            };
-            audio.onerror = reject;
-            audio.play();
-        });
-    } catch (error) {
-        console.error('Google TTS error, falling back to Web Speech:', error);
-        // Fallback to Web Speech API
-        return speakWithWebSpeech(options);
-    }
-}
-
-/**
- * Fallback: Web Speech API
- */
-function speakWithWebSpeech(options: TTSOptions): Promise<void> {
+export async function speakWithWebSpeech(options: TTSOptions): Promise<void> {
     const { text, language = 'pt-BR' } = options;
 
-    return new Promise((resolve, reject) => {
-        const synth = window.speechSynthesis;
-        const utterance = new SpeechSynthesisUtterance(text);
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+        console.warn('Web Speech API not available');
+        throw new Error('Web Speech API not supported');
+    }
 
+    return new Promise((resolve, reject) => {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = language;
-        utterance.rate = 0.9;
+        utterance.rate = 0.9; // Slightly slower for better comprehension
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        utterance.onend = () => resolve();
-        utterance.onerror = (error) => reject(error);
+        utterance.onend = () => {
+            console.log('Web Speech synthesis completed');
+            resolve();
+        };
 
-        synth.speak(utterance);
+        utterance.onerror = (event) => {
+            console.error('Web Speech synthesis error:', event.error);
+            reject(new Error(`Web Speech error: ${event.error}`));
+        };
+
+        // Start speaking
+        window.speechSynthesis.speak(utterance);
     });
-}
-
-/**
- * Main speak function (tries ElevenLabs first, then Google TTS, then Web Speech)
- */
-export async function speak(options: TTSOptions): Promise<void> {
-    // Try ElevenLabs first if voice ID is provided
-    if (options.elevenLabsVoiceId) {
-        try {
-            return await speakWithElevenLabs(options);
-        } catch (error) {
-            console.warn('ElevenLabs failed, falling back to Google TTS:', error);
-        }
-    }
-    
-    // Fallback to Google TTS
-    try {
-        return await speakWithGoogleTTS(options);
-    } catch (error) {
-        console.warn('Google TTS failed, falling back to Web Speech:', error);
-        return speakWithWebSpeech(options);
-    }
 }
 
 /**
  * Stop current speech
  */
 export function stopSpeaking(): void {
-    window.speechSynthesis.cancel();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
 }
 
 /**
  * Check if currently speaking
  */
 export function isSpeaking(): boolean {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+        return false;
+    }
     return window.speechSynthesis.speaking;
 }
 
 /**
- * Initialize TTS (for Web Speech API voices)
+ * Get available voices for Web Speech API
+ */
+export function getAvailableVoices(): SpeechSynthesisVoice[] {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+        return [];
+    }
+
+    return window.speechSynthesis.getVoices();
+}
+
+/**
+ * Initialize TTS service (for Web Speech API voices)
  */
 export function initializeTTS(): Promise<void> {
+    console.log('TTS service initialized with ElevenLabs + Web Speech fallback');
+    
     return new Promise((resolve) => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            resolve();
+            return;
+        }
+
         const synth = window.speechSynthesis;
 
         if (synth.getVoices().length > 0) {
@@ -186,11 +181,12 @@ export function initializeTTS(): Promise<void> {
             resolve();
         };
 
+        // Timeout fallback
         setTimeout(() => resolve(), 1000);
     });
 }
 
-// Helper function
+// Helper function to convert base64 to blob
 function base64ToBlob(base64: string, contentType: string): Blob {
     const byteCharacters = atob(base64);
     const byteArrays = [];
@@ -209,15 +205,3 @@ function base64ToBlob(base64: string, contentType: string): Blob {
 
     return new Blob(byteArrays, { type: contentType });
 }
-
-// Voice configurations for avatars
-export const GOOGLE_TTS_VOICES = {
-    'pt-BR': {
-        male: 'pt-BR-Wavenet-B',
-        female: 'pt-BR-Wavenet-A',
-    },
-    'en': {
-        male: 'en-US-Wavenet-D',
-        female: 'en-US-Wavenet-C',
-    },
-} as const;

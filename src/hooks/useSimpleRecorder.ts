@@ -1,66 +1,53 @@
-import { useState, useCallback, useRef } from 'react';
-import { transcribeAudio, isTranscriptionAvailable, getTranscriptionInfo } from '@/services/transcription';
+import { useState, useRef, useCallback } from 'react';
 
 export interface UseSimpleRecorderResult {
     isRecording: boolean;
-    isTranscribing: boolean;
     recordingDuration: number;
     currentTranscript: string;
-    startRecording: (deviceId?: string) => Promise<void>;
+    startRecording: () => void;
     stopRecording: () => Promise<string | null>;
-    cancelRecording: () => void;
-    isAvailable: boolean;
-    serviceInfo: string;
+    isSupported: boolean;
 }
 
 export function useSimpleRecorder(): UseSimpleRecorderResult {
     const [isRecording, setIsRecording] = useState(false);
-    const [isTranscribing, setIsTranscribing] = useState(false);
     const [recordingDuration, setRecordingDuration] = useState(0);
     const [currentTranscript, setCurrentTranscript] = useState('');
-
+    
     const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const transcriptRef = useRef<string>('');
     const startTimeRef = useRef<number>(0);
-    const deviceIdRef = useRef<string | undefined>();
-    const transcriptionRef = useRef<string>('');
+    const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const isSupported = typeof window !== 'undefined' && 
+        ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
-    const startRecording = useCallback(async (deviceId?: string) => {
-        if (isRecording) return;
-        
-        if (!isTranscriptionAvailable()) {
-            throw new Error('Transcrição não disponível neste navegador. Use Chrome, Firefox ou Safari.');
+    const cleanup = useCallback(() => {
+        if (durationIntervalRef.current) {
+            clearInterval(durationIntervalRef.current);
+            durationIntervalRef.current = null;
         }
+        setIsRecording(false);
+        setRecordingDuration(0);
+    }, []);
 
+    const startRecording = useCallback(() => {
+        if (!isSupported || isRecording) return;
+
+        // Reset transcript
+        transcriptRef.current = '';
+        setCurrentTranscript('');
+        
         try {
-            console.log('Starting recording with device:', deviceId);
-            deviceIdRef.current = deviceId;
-            transcriptionRef.current = '';
-
-            // Request permission for specific device if provided
-            if (deviceId && navigator.mediaDevices) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        audio: { deviceId: { exact: deviceId } }
-                    });
-                    // Close stream immediately as Web Speech API manages its own audio
-                    stream.getTracks().forEach(track => track.stop());
-                } catch (error) {
-                    throw new Error('Erro ao acessar o microfone selecionado. Tente outro dispositivo.');
-                }
-            }
-
-            // Create Web Speech Recognition instance
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
-            recognitionRef.current = recognition;
-
+            
+            // Configure recognition
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'pt-BR';
             recognition.maxAlternatives = 1;
 
-            recognition.onstart = () => {
+            recognition.addEventListener('start', () => {
                 console.log('Recording started successfully');
                 setIsRecording(true);
                 startTimeRef.current = Date.now();
@@ -69,134 +56,99 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 durationIntervalRef.current = setInterval(() => {
                     setRecordingDuration(Date.now() - startTimeRef.current);
                 }, 100);
-            };
+            });
 
-            recognition.onresult = (event) => {
-                console.log('Speech recognition result received:', event);
-                let finalTranscript = '';
-                let interimTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript;
-                    } else {
-                        interimTranscript += transcript;
-                    }
+            recognition.addEventListener('result', (event) => {
+                const speechEvent = event as unknown as SpeechRecognitionEvent;
+                let currentTranscript = '';
+                
+                // Collect all results
+                for (let i = 0; i < speechEvent.results.length; i++) {
+                    const result = speechEvent.results[i][0];
+                    currentTranscript += result.transcript;
                 }
 
-                const currentTranscript = finalTranscript || interimTranscript;
-                transcriptionRef.current = currentTranscript;
+                // Update current transcript state for real-time display
                 setCurrentTranscript(currentTranscript);
-                console.log('Current transcription updated:', currentTranscript);
-            };
+                
+                // Store in ref for final result
+                transcriptRef.current = currentTranscript;
+                
+                console.log('Real-time transcript:', currentTranscript);
+            });
 
-            recognition.onerror = (event) => {
-                console.error('Recording error:', event.error);
+            recognition.addEventListener('error', (event) => {
+                const errorEvent = event as unknown as SpeechRecognitionErrorEvent;
+                console.error('Speech recognition error:', errorEvent.error);
+                
                 cleanup();
                 
-                let errorMessage = 'Erro na gravação';
-                switch (event.error) {
-                    case 'not-allowed':
-                        errorMessage = 'Permissão de microfone negada. Permita acesso ao microfone.';
-                        break;
-                    case 'no-speech':
-                        errorMessage = 'Nenhuma fala detectada. Fale após iniciar a gravação.';
-                        break;
-                    case 'network':
-                        errorMessage = 'Erro de conexão. Verifique sua internet.';
-                        break;
-                    case 'aborted':
-                        errorMessage = 'Gravação foi interrompida.';
-                        break;
+                let errorMessage = 'Erro na transcrição. Tente novamente.';
+                
+                if (errorEvent.error === 'no-speech') {
+                    errorMessage = 'Nenhuma fala detectada. Tente falar mais alto.';
+                } else if (errorEvent.error === 'not-allowed') {
+                    errorMessage = 'Permissão negada. Permita acesso ao microfone.';
+                } else if (errorEvent.error === 'network') {
+                    errorMessage = 'Erro de conexão. Verifique sua internet.';
                 }
                 
-                console.error('Speech recognition error:', errorMessage);
-                // Don't throw here, just log the error
-            };
+                // Show error temporarily
+                setCurrentTranscript(errorMessage);
+                setTimeout(() => setCurrentTranscript(''), 3000);
+            });
 
-            recognition.onend = () => {
+            recognition.addEventListener('end', () => {
                 console.log('Speech recognition ended');
-                setIsRecording(false);
-            };
-
-            recognition.start();
-        } catch (error) {
-            cleanup();
-            console.error('Failed to start recording:', error);
-            throw error;
-        }
-    }, [isRecording]);
-
-    const stopRecording = useCallback(async (): Promise<string | null> => {
-        if (!isRecording || !recognitionRef.current) {
-            console.log('No active recording to stop');
-            return null;
-        }
-
-        return new Promise((resolve) => {
-            const recognition = recognitionRef.current;
-            if (!recognition) {
                 cleanup();
+            });
+
+            recognitionRef.current = recognition;
+            recognition.start();
+            
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            cleanup();
+        }
+    }, [isSupported, isRecording, cleanup]);
+
+    const stopRecording = useCallback((): Promise<string | null> => {
+        return new Promise((resolve) => {
+            if (!recognitionRef.current || !isRecording) {
                 resolve(null);
                 return;
             }
 
-            console.log('Stopping recording...');
-            setIsTranscribing(true);
+            // Capture current transcript BEFORE stopping
+            const finalTranscript = transcriptRef.current.trim();
+            console.log('Stopping recording, captured transcript:', finalTranscript);
 
-            // Set up the end handler before stopping
-            recognition.onend = () => {
-                console.log('Recognition ended, cleaning up...');
-                
-                // Capture the text BEFORE cleanup
-                const finalText = transcriptionRef.current ? transcriptionRef.current.trim() : '';
-                console.log('Final transcription:', finalText);
-                
+            const recognition = recognitionRef.current;
+
+            recognition.addEventListener('end', () => {
+                console.log('Speech recognition ended, final transcript:', finalTranscript);
                 cleanup();
-                resolve(finalText || null);
-            };
+                
+                // Resolve with the captured transcript
+                resolve(finalTranscript || null);
+            });
 
-            // Stop the recognition after a short delay to get final results
-            setTimeout(() => {
+            try {
                 recognition.stop();
-            }, 300);
+            } catch (error) {
+                console.error('Error stopping recognition:', error);
+                cleanup();
+                resolve(finalTranscript || null);
+            }
         });
-    }, [isRecording]);
-
-    const cancelRecording = useCallback(() => {
-        if (recognitionRef.current && isRecording) {
-            recognitionRef.current.stop();
-        }
-        cleanup();
-    }, [isRecording]);
-
-    const cleanup = useCallback(() => {
-        // Stop duration timer
-        if (durationIntervalRef.current) {
-            clearInterval(durationIntervalRef.current);
-            durationIntervalRef.current = null;
-        }
-
-        // Reset state
-        setIsRecording(false);
-        setIsTranscribing(false);
-        setRecordingDuration(0);
-        setCurrentTranscript('');
-        recognitionRef.current = null;
-        deviceIdRef.current = undefined;
-        transcriptionRef.current = '';
-    }, []);
+    }, [isRecording, cleanup]);
 
     return {
         isRecording,
-        isTranscribing,
         recordingDuration,
         currentTranscript,
         startRecording,
         stopRecording,
-        cancelRecording,
-        isAvailable: isTranscriptionAvailable(),
-        serviceInfo: getTranscriptionInfo(),
+        isSupported,
     };
 }
