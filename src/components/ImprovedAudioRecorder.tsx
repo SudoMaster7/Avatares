@@ -22,7 +22,6 @@ export function ImprovedAudioRecorder({
 }: ImprovedAudioRecorderProps) {
     const [showRecording, setShowRecording] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [lastTranscription, setLastTranscription] = useState<string>('');
     
     const {
         isRecording,
@@ -33,12 +32,13 @@ export function ImprovedAudioRecorder({
         isSupported,
     } = useSimpleRecorder();
 
-    // Update last transcription when current changes
+    // Cleanup on unmount
     React.useEffect(() => {
-        if (currentTranscript && currentTranscript.trim()) {
-            setLastTranscription(currentTranscript);
-        }
-    }, [currentTranscript]);
+        return () => {
+            setError(null);
+            setShowRecording(false);
+        };
+    }, []);
 
     const handleStartRecording = async () => {
         try {
@@ -57,46 +57,22 @@ export function ImprovedAudioRecorder({
 
     const handleStopRecording = async () => {
         try {
-            console.log('User requesting to stop recording...');
-            
-            // Give a small delay to capture any final speech
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+            console.log('🛑 User stopping recording...');
             const transcription = await stopRecording();
-            console.log('Raw transcription result:', transcription);
+            console.log('📝 Transcription result:', transcription);
             
             setShowRecording(false);
             setError(null);
             
             if (transcription && transcription.trim()) {
-                console.log('Valid transcription received:', transcription);
-                setLastTranscription(transcription);
-                onTranscriptionComplete(transcription);
+                console.log('✅ Sending transcription:', transcription);
+                onTranscriptionComplete(transcription.trim());
             } else {
-                // If we have a partial transcription from the logs, try to recover it
-                if (lastTranscription && lastTranscription.trim()) {
-                    console.log('Using last known transcription:', lastTranscription);
-                    onTranscriptionComplete(lastTranscription);
-                } else {
-                    const errorMsg = 'Transcrição incompleta detectada. Verifique os logs do console - o texto pode ter sido capturado mas não finalizado corretamente.';
-                    console.warn(errorMsg);
-                    setError('Transcrição incompleta');
-                    
-                    // Show option to try sending anyway
-                    if (window.confirm(errorMsg + '\n\nDeseja tentar enviar uma mensagem de teste?')) {
-                        onTranscriptionComplete('Teste de transcrição de áudio');
-                    }
-                }
+                setError('Nenhum texto detectado');
             }
         } catch (error) {
-            console.error('Transcription process failed:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Erro na transcrição';
-            setError(errorMessage);
-            
-            // Offer fallback option
-            if (window.confirm(`Erro na transcrição: ${errorMessage}\n\nDeseja enviar uma mensagem de teste mesmo assim?`)) {
-                onTranscriptionComplete('Teste de áudio - transcrição com erro');
-            }
+            console.error('❌ Transcription failed:', error);
+            setError('Erro na transcrição');
             setShowRecording(false);
         }
     };
@@ -192,40 +168,7 @@ export function ImprovedAudioRecorder({
         );
     }
 
-    // Show error state with recovery option
-    if (error && lastTranscription && lastTranscription.trim()) {
-        return (
-            <div className={cn("flex flex-col gap-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 px-3 py-2 rounded-xl border border-orange-200 dark:border-orange-800", className)}>
-                <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">Problema na transcrição</span>
-                </div>
-                <div className="text-xs bg-white/50 dark:bg-black/20 rounded px-2 py-1">
-                    Texto capturado: &quot;{lastTranscription}&quot;
-                </div>
-                <div className="flex gap-1">
-                    <Button
-                        onClick={() => {
-                            setError(null);
-                            onTranscriptionComplete(lastTranscription);
-                        }}
-                        size="sm"
-                        className="h-6 px-2 bg-orange-500 hover:bg-orange-600 text-white text-xs"
-                    >
-                        Usar Este Texto
-                    </Button>
-                    <Button
-                        onClick={() => setError(null)}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-xs"
-                    >
-                        Tentar Novamente
-                    </Button>
-                </div>
-            </div>
-        );
-    }
+
 
     // Show simple error state for other errors
     if (error) {

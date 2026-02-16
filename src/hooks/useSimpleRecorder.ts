@@ -15,17 +15,29 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
     const [currentTranscript, setCurrentTranscript] = useState('');
     
     const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const transcriptRef = useRef<string>('');
+    const finalTranscriptRef = useRef<string>('');
     const startTimeRef = useRef<number>(0);
     const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const isSupported = typeof window !== 'undefined' && 
         ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
     const cleanup = useCallback(() => {
+        // Clear interval
         if (durationIntervalRef.current) {
             clearInterval(durationIntervalRef.current);
             durationIntervalRef.current = null;
         }
+        
+        // Remove event listeners and cleanup recognition
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+            } catch (e) {
+                // Ignore errors during cleanup
+            }
+            recognitionRef.current = null;
+        }
+        
         setIsRecording(false);
         setRecordingDuration(0);
     }, []);
@@ -33,8 +45,11 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
     const startRecording = useCallback(() => {
         if (!isSupported || isRecording) return;
 
+        // Clean up any existing recognition first
+        cleanup();
+
         // Reset transcript
-        transcriptRef.current = '';
+        finalTranscriptRef.current = '';
         setCurrentTranscript('');
         
         try {
@@ -48,7 +63,7 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
             recognition.maxAlternatives = 1;
 
             recognition.addEventListener('start', () => {
-                console.log('Recording started successfully');
+                console.log('🎤 Recording started');
                 setIsRecording(true);
                 startTimeRef.current = Date.now();
 
@@ -60,54 +75,62 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
 
             recognition.addEventListener('result', (event) => {
                 const speechEvent = event as unknown as SpeechRecognitionEvent;
-                let currentTranscript = '';
+                let finalTranscript = '';
+                let interimTranscript = '';
                 
-                // Collect all results
+                // Separate final and interim results to avoid duplication
                 for (let i = 0; i < speechEvent.results.length; i++) {
-                    const result = speechEvent.results[i][0];
-                    currentTranscript += result.transcript;
+                    const transcript = speechEvent.results[i][0].transcript;
+                    if (speechEvent.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
                 }
 
-                // Update current transcript state for real-time display
-                setCurrentTranscript(currentTranscript);
-                
-                // Store in ref for final result
-                transcriptRef.current = currentTranscript;
-                
-                console.log('Real-time transcript:', currentTranscript);
+                // Store only final transcript in ref
+                if (finalTranscript) {
+                    finalTranscriptRef.current = finalTranscript;
+                    console.log('✅ Final transcript:', finalTranscript);
+                }
+
+                // Show final + interim for real-time feedback
+                const displayTranscript = (finalTranscriptRef.current + interimTranscript).trim();
+                setCurrentTranscript(displayTranscript);
             });
 
             recognition.addEventListener('error', (event) => {
                 const errorEvent = event as unknown as SpeechRecognitionErrorEvent;
-                console.error('Speech recognition error:', errorEvent.error);
+                console.error('❌ Speech error:', errorEvent.error);
                 
-                cleanup();
-                
-                let errorMessage = 'Erro na transcrição. Tente novamente.';
-                
+                let errorMessage = 'Erro na transcrição';
                 if (errorEvent.error === 'no-speech') {
-                    errorMessage = 'Nenhuma fala detectada. Tente falar mais alto.';
+                    errorMessage = 'Nenhuma fala detectada';
                 } else if (errorEvent.error === 'not-allowed') {
-                    errorMessage = 'Permissão negada. Permita acesso ao microfone.';
+                    errorMessage = 'Permissão negada';
                 } else if (errorEvent.error === 'network') {
-                    errorMessage = 'Erro de conexão. Verifique sua internet.';
+                    errorMessage = 'Erro de conexão';
                 }
                 
-                // Show error temporarily
                 setCurrentTranscript(errorMessage);
-                setTimeout(() => setCurrentTranscript(''), 3000);
+                setTimeout(cleanup, 2000);
             });
 
             recognition.addEventListener('end', () => {
-                console.log('Speech recognition ended');
-                cleanup();
+                console.log('🛑 Recording ended');
+                if (durationIntervalRef.current) {
+                    clearInterval(durationIntervalRef.current);
+                    durationIntervalRef.current = null;
+                }
+                setIsRecording(false);
+                setRecordingDuration(0);
             });
 
             recognitionRef.current = recognition;
             recognition.start();
             
         } catch (error) {
-            console.error('Failed to start recording:', error);
+            console.error('❌ Failed to start recording:', error);
             cleanup();
         }
     }, [isSupported, isRecording, cleanup]);
@@ -119,27 +142,24 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 return;
             }
 
-            // Capture current transcript BEFORE stopping
-            const finalTranscript = transcriptRef.current.trim();
-            console.log('Stopping recording, captured transcript:', finalTranscript);
-
             const recognition = recognitionRef.current;
-
-            recognition.addEventListener('end', () => {
-                console.log('Speech recognition ended, final transcript:', finalTranscript);
-                cleanup();
+            
+            // Give a moment for final results then stop
+            setTimeout(() => {
+                const finalText = finalTranscriptRef.current.trim();
+                console.log('📝 Stopping - Final text:', finalText);
                 
-                // Resolve with the captured transcript
-                resolve(finalTranscript || null);
-            });
-
-            try {
-                recognition.stop();
-            } catch (error) {
-                console.error('Error stopping recognition:', error);
+                try {
+                    recognition.stop();
+                } catch (error) {
+                    console.error('Error stopping recognition:', error);
+                }
+                
+                // Clean up and resolve
                 cleanup();
-                resolve(finalTranscript || null);
-            }
+                setCurrentTranscript(''); // Clear display
+                resolve(finalText || null);
+            }, 300);
         });
     }, [isRecording, cleanup]);
 
