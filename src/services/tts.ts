@@ -2,6 +2,7 @@
 export interface TTSOptions {
     text: string;
     language?: string;
+    preferFemale?: boolean;  // hint for Web Speech voice selection
     // ElevenLabs options
     elevenLabsVoiceId?: string;
     elevenLabsModelId?: string;
@@ -161,37 +162,60 @@ export async function speakWithElevenLabs(options: TTSOptions): Promise<void> {
 }
 
 /**
- * Web Speech API fallback (built into browsers)
+ * Web Speech API — uses browser native voices (Chrome has 'Google português do Brasil')
  */
 export async function speakWithWebSpeech(options: TTSOptions): Promise<void> {
-    const { text, language = 'pt-BR' } = options;
+    const { text, language = 'pt-BR', preferFemale } = options;
 
     if (typeof window === 'undefined' || !window.speechSynthesis) {
         console.warn('Web Speech API not available');
         throw new Error('Web Speech API not supported');
     }
 
+    // Pick the best available voice for this language
+    const pickVoice = (): SpeechSynthesisVoice | null => {
+        const voices = window.speechSynthesis.getVoices();
+        const lang = language.toLowerCase().replace('_', '-');
+        // Prefer exact locale match, then partial match
+        const matches = voices.filter(v => v.lang.toLowerCase().startsWith(lang.substring(0, 5)));
+        if (matches.length === 0) return null;
+        // Prefer Google voices (highest quality in Chrome)
+        const google = matches.filter(v => v.name.toLowerCase().includes('google'));
+        const pool = google.length > 0 ? google : matches;
+        if (preferFemale === true)  return pool.find(v => /female|feminina|feminin/i.test(v.name)) ?? pool[0];
+        if (preferFemale === false) return pool.find(v => /male|masculino|masculo/i.test(v.name)) ?? pool[0];
+        return pool[0];
+    };
+
     return new Promise((resolve, reject) => {
-        // Cancel any ongoing speech
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = language;
-        utterance.rate = 0.9; // Slightly slower for better comprehension
+        utterance.rate = 0.92;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        utterance.onend = () => {
-            console.log('Web Speech synthesis completed');
-            resolve();
+        // Voices may not be loaded yet — wait up to 300 ms
+        const applyVoice = () => {
+            const voice = pickVoice();
+            if (voice) {
+                utterance.voice = voice;
+                console.log(`[WebSpeech] using voice: ${voice.name} (${voice.lang})`);
+            } else {
+                console.warn(`[WebSpeech] no native voice found for ${language}, browser will pick default`);
+            }
         };
 
-        utterance.onerror = (event) => {
-            console.error('Web Speech synthesis error:', event.error);
-            reject(new Error(`Web Speech error: ${event.error}`));
-        };
+        if (window.speechSynthesis.getVoices().length > 0) {
+            applyVoice();
+        } else {
+            window.speechSynthesis.onvoiceschanged = () => { applyVoice(); window.speechSynthesis.onvoiceschanged = null; };
+        }
 
-        // Start speaking
+        utterance.onend = () => resolve();
+        utterance.onerror = (event) => reject(new Error(`Web Speech error: ${event.error}`));
+
         window.speechSynthesis.speak(utterance);
     });
 }

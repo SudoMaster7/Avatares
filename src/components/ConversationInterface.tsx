@@ -253,26 +253,30 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                     similarityBoost: avatar.voiceConfig.similarityBoost,
                 });
             } else if (ttsType === 'lemonfox') {
-                // Free users get Lemonfox; fallback to Web Speech API if it fails
-                const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId
-                    ?? (avatar.language === 'en' ? 'sarah' : 'michael');
-                try {
-                    await speakWithLemonfox({
-                        text: apiResponse.content,
-                        language: avatar.language,
-                        lemonfoxVoiceId: lemonfoxVoice,
-                        speed: avatar.voiceConfig.rate,
-                    });
-                } catch {
-                    // Fallback: Web Speech API — suporta pt-BR nativamente no Chrome
-                    console.warn('[TTS] Lemonfox falhou, usando Web Speech API');
+                const isEnglish = avatar.language === 'en' || avatar.language === 'en-US';
+                if (isEnglish) {
+                    // English avatars: use Lemonfox (native EN voices)
+                    const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId ?? 'sarah';
+                    try {
+                        await speakWithLemonfox({
+                            text: apiResponse.content,
+                            language: avatar.language,
+                            lemonfoxVoiceId: lemonfoxVoice,
+                            speed: avatar.voiceConfig.rate,
+                        });
+                    } catch {
+                        await speakWithWebSpeech({ text: apiResponse.content, language: 'en-US' });
+                    }
+                } else {
+                    // PT-BR and other languages: Web Speech API has genuine native voices
+                    // Chrome/Edge include 'Google português do Brasil' — real PT-BR accent
                     await speakWithWebSpeech({
                         text: apiResponse.content,
                         language: avatar.language ?? 'pt-BR',
+                        preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
                     });
                 }
             } else if (ttsType === 'google') {
-                // Fallback to Web Speech API
                 await speakWithWebSpeech({
                     text: apiResponse.content,
                     language: avatar.language,
