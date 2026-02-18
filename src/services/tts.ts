@@ -7,13 +7,19 @@ export interface TTSOptions {
     elevenLabsModelId?: string;
     stability?: number;
     similarityBoost?: number;
+    // Lemonfox options
+    lemonfoxVoiceId?: string;
+    speed?: number;
+    pitch?: number;
 }
 
+export type TTSProvider = 'elevenlabs' | 'lemonfox' | 'google' | 'web';
+
 /**
- * Main TTS function - uses ElevenLabs with Web Speech fallback
+ * Main TTS function - uses ElevenLabs, Lemonfox, or Web Speech based on config
  */
 export async function speak(options: TTSOptions): Promise<void> {
-    const { text, elevenLabsVoiceId } = options;
+    const { text, elevenLabsVoiceId, lemonfoxVoiceId } = options;
     
     if (!text || text.trim().length === 0) {
         console.warn('Empty text provided to TTS service');
@@ -27,13 +33,74 @@ export async function speak(options: TTSOptions): Promise<void> {
             await speakWithElevenLabs(options);
             return;
         } catch (error) {
-            console.warn('ElevenLabs failed, falling back to Web Speech:', error);
+            console.warn('ElevenLabs failed, trying Lemonfox:', error);
+        }
+    }
+
+    // Try Lemonfox if voice ID is provided
+    if (lemonfoxVoiceId) {
+        try {
+            console.log('Using Lemonfox TTS');
+            await speakWithLemonfox(options);
+            return;
+        } catch (error) {
+            console.warn('Lemonfox failed, falling back to Web Speech:', error);
         }
     }
     
     // Fallback to Web Speech API
     console.log('Using Web Speech API');
     await speakWithWebSpeech(options);
+}
+
+/**
+ * Speak text using Lemonfox TTS (high quality, good value)
+ */
+export async function speakWithLemonfox(options: TTSOptions): Promise<void> {
+    const { 
+        text, 
+        lemonfoxVoiceId = 'fernanda',
+        speed = 1.0,
+        pitch = 1.0,
+    } = options;
+
+    try {
+        const response = await fetch('/api/lemonfox', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text,
+                voiceId: lemonfoxVoiceId,
+                speed,
+                pitch,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Lemonfox API failed');
+        }
+
+        const data = await response.json();
+
+        // Convert base64 to audio and play
+        const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        return new Promise((resolve, reject) => {
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                resolve();
+            };
+            audio.onerror = reject;
+            audio.play();
+        });
+    } catch (error) {
+        console.error('Lemonfox TTS error:', error);
+        throw error;
+    }
 }
 
 /**

@@ -3,17 +3,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { AvatarConfig } from '@/lib/avatars';
 import { Scenario } from '@/lib/scenarios';
-import { generateResponse, createAvatarSystemPrompt } from '@/services/groq';
-import { speak, initializeTTS } from '@/services/tts';
+import { generateResponse, createAvatarSystemPrompt, ChatApiResponse } from '@/services/groq';
+import { speak, initializeTTS, speakWithWebSpeech, speakWithLemonfox } from '@/services/tts';
 import { useGamification } from '@/hooks/useGamification';
+import { usePlan } from '@/hooks/usePlan';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Send, Volume2, Loader2, Target, Menu } from 'lucide-react';
+import { Send, Volume2, Loader2, Target, Menu, Crown } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { VisualContext } from '@/components/VisualContext';
 import { AudioRecorderButton } from '@/components/AudioRecorderButton';
 import { ImprovedAudioRecorder } from '@/components/ImprovedAudioRecorder';
 import { MicrophoneSelector } from '@/components/MicrophoneSelector';
+import { TokenScarcityIndicator, QualityBanner } from '@/components/PersuasiveUpsells';
+import { AuthDialog } from '@/components/AuthDialog';
 
 import { initializeGuestSession } from '@/services/auth-service';
 import { getOrCreateConversation, saveMessage, loadConversationHistory } from '@/services/history';
@@ -29,22 +33,46 @@ interface ConversationInterfaceProps {
     avatar: AvatarConfig;
     scenario?: Scenario | null;
     onBack: () => void;
+    customSystemPrompt?: string;
 }
 
-export function ConversationInterface({ avatar, scenario, onBack }: ConversationInterfaceProps) {
+export function ConversationInterface({ avatar, scenario, onBack, customSystemPrompt }: ConversationInterfaceProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [showVisualContext, setShowVisualContext] = useState(true);
+    const [userId, setUserId] = useState<string | null | undefined>(undefined); // undefined = loading
+    const [showAuthDialog, setShowAuthDialog] = useState(false);
 
     const { trackMessageSent, trackScenarioCompleted } = useGamification();
+    const planState = usePlan(userId ?? null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const hasInitialized = useRef(false);
 
-    // Initialize services
+    // Get user ID on mount - wait for session, then subscribe to changes
     useEffect(() => {
+        const fetchUserId = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUserId(session?.user?.id ?? null);
+        };
+        fetchUserId();
+
+        // Subscribe to auth changes (e.g. user logs in from AuthDialog)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUserId(session?.user?.id ?? null);
+            // Reset plan data on auth change
+            planState.refresh?.();
+        });
+        return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Initialize services - wait until we know the auth state
+    useEffect(() => {
+        // userId is still loading (undefined) - wait
+        if (userId === undefined) return;
         // Prevent double execution in React Strict Mode
         if (hasInitialized.current) return;
         hasInitialized.current = true;
@@ -148,7 +176,7 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
 
         try {
             // Generate AI response
-            const systemPrompt = createAvatarSystemPrompt(
+            const systemPrompt = customSystemPrompt || createAvatarSystemPrompt(
                 avatar.name,
                 avatar.personality,
                 avatar.subject,
@@ -161,18 +189,42 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                 content: m.content,
             }));
 
-            const response = await generateResponse({
+            const apiResponse = await generateResponse({
                 messages: [
                     { role: 'system', content: systemPrompt },
                     ...conversationHistory,
                     { role: 'user', content: textToSend },
                 ],
+                userId: userId ?? null,
+                avatarId: avatar.id,
+                userMessage: textToSend,
             });
+
+            // Handle upgrade/signup prompts
+            if (apiResponse.error) {
+                const errorMessage: Message = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: apiResponse.error,
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, errorMessage]);
+                
+                // Show AuthDialog if signup is needed
+                if (apiResponse.showSignupModal || apiResponse.demoComplete) {
+                    setTimeout(() => setShowAuthDialog(true), 500);
+                }
+                
+                // Refresh plan state after error
+                planState.refresh();
+                setIsProcessing(false);
+                return;
+            }
 
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: response,
+                content: apiResponse.content,
                 timestamp: new Date(),
             };
 
@@ -180,20 +232,45 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
 
             // Save assistant message
             if (conversationId) {
-                saveMessage(conversationId, response, 'avatar');
+                saveMessage(conversationId, apiResponse.content, 'avatar');
             }
 
-            // Speak response
+            // Refresh plan state to update token count
+            planState.refresh();
+
+            // Speak response - use TTS based on plan
             setIsSpeaking(true);
-            await speak({
-                text: response,
-                language: avatar.language,
-                // ElevenLabs configuration
-                elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
-                elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
-                stability: avatar.voiceConfig.stability,
-                similarityBoost: avatar.voiceConfig.similarityBoost,
-            });
+            const ttsType = apiResponse.meta?.ttsType;
+            
+            if (ttsType === 'elevenlabs' && avatar.voiceConfig.elevenLabsVoiceId) {
+                // Pro users get ElevenLabs (best quality)
+                await speak({
+                    text: apiResponse.content,
+                    language: avatar.language,
+                    elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
+                    elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
+                    stability: avatar.voiceConfig.stability,
+                    similarityBoost: avatar.voiceConfig.similarityBoost,
+                });
+            } else if (ttsType === 'lemonfox') {
+                // Free users get Lemonfox (good quality, per-avatar voice)
+                const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId
+                    ?? (avatar.language === 'pt-BR' ? 'fernanda' : avatar.language === 'en' ? 'olivia' : 'fernanda');
+                await speakWithLemonfox({
+                    text: apiResponse.content,
+                    language: avatar.language,
+                    lemonfoxVoiceId: lemonfoxVoice,
+                    speed: avatar.voiceConfig.rate,
+                });
+            } else if (ttsType === 'google') {
+                // Fallback to Web Speech API
+                await speakWithWebSpeech({
+                    text: apiResponse.content,
+                    language: avatar.language,
+                });
+            }
+            // Guest users (ttsType === null) get no TTS
+            
             setIsSpeaking(false);
         } catch (error) {
             console.error('Error generating response:', error);
@@ -211,7 +288,7 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
 
     const handleAudioTranscription = (transcription: string) => {
         console.log('Audio transcription received in ConversationInterface:', transcription);
-        
+
         if (!transcription || !transcription.trim()) {
             console.warn('Empty transcription received');
             return;
@@ -219,9 +296,9 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
 
         const cleanedTranscription = transcription.trim();
         console.log('Setting input to:', cleanedTranscription);
-        
+
         setInput(cleanedTranscription);
-        
+
         // Automatically send the transcribed message after a short delay
         setTimeout(() => {
             if (cleanedTranscription) {
@@ -241,19 +318,19 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                     <div className="flex items-start justify-between gap-3 sm:gap-6">
                         {/* Left: Avatar Image + Info */}
                         <div className="flex items-start gap-3 sm:gap-6 flex-1 min-w-0">
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 onClick={onBack}
                                 className="hover:bg-gray-100 dark:hover:bg-slate-700 self-center px-2 sm:px-4 text-sm sm:text-base shrink-0"
                             >
                                 ← <span className="hidden sm:inline">Voltar</span>
                             </Button>
-                            
+
                             {/* Avatar Image */}
                             <div className="relative shrink-0">
                                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white dark:bg-slate-700 shadow-md ring-2 ring-blue-200 dark:ring-blue-600/50 overflow-hidden flex items-center justify-center">
-                                    <img 
-                                        src={avatar.imageUrl} 
+                                    <img
+                                        src={avatar.imageUrl}
                                         alt={avatar.name}
                                         className="w-full h-full object-cover"
                                         onError={(e) => {
@@ -315,6 +392,28 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                     </div>
                 </div>
             </div>
+
+            {/* Quality & Token Status Bar */}
+            {!planState.isLoading && !planState.isPro && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200/50 dark:border-amber-700/50 px-4 py-2">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+                        <QualityBanner currentQuality={planState.modelQuality} />
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs text-amber-700 dark:text-amber-300">
+                                {planState.tokensRemaining} tokens restantes
+                            </span>
+                            <Button
+                                size="sm"
+                                className="bg-amber-400 hover:bg-amber-500 text-black text-xs font-bold px-3 py-1 h-auto"
+                                onClick={() => window.location.href = '/planos'}
+                            >
+                                <Crown className="w-3 h-3 mr-1" />
+                                Upgrade
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Content Area */}
             <div className="flex flex-1 overflow-hidden relative">
@@ -399,13 +498,13 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                                     className="flex-1 min-h-[44px] sm:min-h-[52px] max-h-[100px] sm:max-h-[120px] resize-none py-3 px-4 rounded-xl border border-gray-300 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-200 dark:focus:ring-blue-900/30 placeholder:text-gray-500 dark:placeholder:text-gray-400 bg-white dark:bg-slate-700 text-gray-900 dark:text-white font-normal shadow-sm transition-all text-sm sm:text-base"
                                     disabled={isProcessing}
                                 />
-                                
+
                                 {/* Audio Recording Button */}
                                 <ImprovedAudioRecorder
                                     onTranscriptionComplete={handleAudioTranscription}
                                     disabled={isProcessing}
                                 />
-                                
+
                                 {/* Fallback: Original Audio Recording Button (kept for backup) */}
                                 {/*
                                 <AudioRecorderButton
@@ -414,16 +513,47 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                                     selectedDeviceId={selectedMicrophoneId}
                                 />
                                 */}
-                                
+
                                 <Button
                                     onClick={() => handleSendMessage()}
-                                    disabled={!input.trim() || isProcessing}
+                                    disabled={!input.trim() || isProcessing || !planState.canSendMessage}
                                     size="icon"
                                     className="h-11 w-11 sm:h-13 sm:w-13 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shrink-0 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                                 </Button>
                             </div>
+                            
+                            {/* Token exhausted warning */}
+                            {!planState.canSendMessage && !planState.isPro && (
+                                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-center">
+                                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                                        ⚠️ Seus tokens acabaram! 
+                                        <button 
+                                            onClick={() => window.location.href = '/planos'}
+                                            className="ml-2 underline font-bold hover:text-red-700"
+                                        >
+                                            Faça upgrade para Pro
+                                        </button>
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Guest auth prompt */}
+                            {userId === null && planState.isGuest && (
+                                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-center">
+                                    <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                                        🔒 Crie uma conta grátis para desbloquear todos os personagens!
+                                    </p>
+                                    <button
+                                        onClick={() => setShowAuthDialog(true)}
+                                        className="mt-1 text-sm font-bold text-blue-600 dark:text-blue-400 underline hover:text-blue-800"
+                                    >
+                                        Criar conta / Entrar
+                                    </button>
+                                </div>
+                            )}
+                            
                             <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-center gap-2 font-medium">
                                 <span>🎙️ <span className="hidden sm:inline">Voz IA Ativada</span><span className="sm:hidden">Voz IA</span></span>
                                 <span className="w-1 h-1 rounded-full bg-gray-400" />
@@ -446,6 +576,13 @@ export function ConversationInterface({ avatar, scenario, onBack }: Conversation
                     </div>
                 )}
             </div>
+
+            {/* Auth Dialog for guests */}
+            <AuthDialog 
+                open={showAuthDialog} 
+                onOpenChange={setShowAuthDialog}
+                onSuccess={() => window.location.reload()}
+            />
         </div>
     );
 }

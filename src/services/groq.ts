@@ -1,6 +1,8 @@
 // Client-side service that calls our API route
 // This avoids exposing API keys in the browser
 
+import { supabase } from '@/lib/supabase';
+
 export interface ChatMessage {
     role: 'system' | 'user' | 'assistant';
     content: string;
@@ -11,37 +13,82 @@ export interface GenerateResponseOptions {
     temperature?: number;
     maxTokens?: number;
     model?: string;
+    userId?: string | null;
+    avatarId?: string;
+    userMessage?: string;  // For content filtering
 }
 
-export async function generateResponse(options: GenerateResponseOptions): Promise<string> {
+export interface ChatApiResponse {
+    content: string;
+    meta?: {
+        plan: string;
+        modelQuality: string;
+        tokensRemaining: number;
+        canUseTTS: boolean;
+        ttsType: 'google' | 'elevenlabs' | 'lemonfox' | null;
+    };
+    error?: string;
+    upgradeRequired?: boolean;
+    demoComplete?: boolean;
+    showSignupModal?: boolean;
+}
+
+export async function generateResponse(options: GenerateResponseOptions): Promise<ChatApiResponse> {
     const {
         messages,
         temperature = 0.7,
         maxTokens = 500,
         model = 'llama-3.3-70b-versatile',
+        userId,
+        avatarId,
+        userMessage,
     } = options;
 
     try {
+        // Get session token so server can verify user role (admin check)
+        let authToken: string | undefined;
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            authToken = session?.access_token;
+        } catch { /* non-critical */ }
+
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
             },
             body: JSON.stringify({
                 messages,
                 temperature,
                 maxTokens,
                 model,
+                userId,
+                avatarId,
+                userMessage,
             }),
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to generate AI response');
+            const errorData = await response.json();
+            // Return error response so caller can handle upgrade/signup prompts
+            if (response.status === 402) {
+                return {
+                    content: '',
+                    error: errorData.error,
+                    upgradeRequired: errorData.upgradeRequired,
+                    demoComplete: errorData.demoComplete,
+                    showSignupModal: errorData.showSignupModal,
+                };
+            }
+            throw new Error(errorData.error || 'Failed to generate AI response');
         }
 
         const data = await response.json();
-        return data.content;
+        return {
+            content: data.content,
+            meta: data.meta,
+        };
     } catch (error) {
         console.error('Error generating response:', error);
         throw error;
@@ -123,13 +170,14 @@ export async function generateQuiz(
     ]`;
 
     try {
-        const content = await generateResponse({
-            messages: [{ role: 'system', content: prompt }], // Changed to system role for better adherence
-            temperature: 0.1, // Lower temperature for more deterministic output
+        const apiResponse = await generateResponse({
+            messages: [{ role: 'system', content: prompt }],
+            temperature: 0.1,
             model: 'llama-3.3-70b-versatile',
         });
 
-        console.log('Quiz Raw output:', content); // Debug log
+        const content = apiResponse.content;
+        console.log('Quiz Raw output:', content);
 
         // Robust JSON extraction
         let jsonString = content;

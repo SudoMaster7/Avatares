@@ -10,11 +10,41 @@ import { AmbientParticles } from './AmbientParticles';
 import { MiniGamePlayer } from '@/components/minigames';
 import { AVATARS } from '@/lib/avatars';
 import { SUBJECTS } from '@/lib/subjects';
+import { supabase } from '@/lib/supabase';
+import {
+  loadDashboardDataFromCloud,
+  saveDashboardDataToCloud,
+  loadDashboardLocally,
+  saveDashboardLocally,
+  loadGameStatsFromCloud,
+  loadGameStatsLocally,
+  mergeDashboardData,
+  type DashboardData,
+  type SubjectProgressData,
+  type DashboardStats,
+} from '@/services/user-data';
+import { calculateLevel } from '@/lib/gamification';
 import type { UserDashboardStats, UserSubjectProgress } from '@/types/dashboard';
 
 interface StudentDashboardProps {
   userId?: string;
   onNavigateTo?: (view: 'avatars' | 'mini-games' | 'conversation', subjectId?: string) => void;
+}
+
+// Default empty progress for each subject
+function createDefaultSubjectProgress(): Record<string, SubjectProgressData> {
+  const result: Record<string, SubjectProgressData> = {};
+  for (const subject of SUBJECTS) {
+    result[subject.id] = {
+      subjectId: subject.id,
+      level: 1,
+      progress: 0,
+      xp: 0,
+      miniGamesCompleted: 0,
+      messagesExchanged: 0,
+    };
+  }
+  return result;
 }
 
 export function StudentDashboard({ userId, onNavigateTo }: StudentDashboardProps) {
@@ -34,116 +64,112 @@ export function StudentDashboard({ userId, onNavigateTo }: StudentDashboardProps
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [playingMiniGame, setPlayingMiniGame] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Use a ref to track pending saves so we can access latest state
+  const pendingSaveRef = React.useRef<{ progress: Record<string, any>; stats: UserDashboardStats } | null>(null);
+
+  // Auto-save whenever subjectProgress or stats change (debounced)
+  useEffect(() => {
+    if (isLoading) return;
+    const timeout = setTimeout(() => {
+      const dashData: DashboardData = {
+        subjectProgress: subjectProgress,
+        stats: stats,
+        lastUpdated: new Date().toISOString(),
+      };
+      saveDashboardLocally(dashData);
+      if (isAuthenticated) {
+        saveDashboardDataToCloud(dashData);
+      }
+    }, 1000);
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectProgress, stats, isAuthenticated]);
 
   useEffect(() => {
-    const mockProgress: Record<string, any> = {
-      'math': {
-        subjectId: 'math',
-        level: 5,
-        progress: 65,
-        xp: 450,
-        miniGamesCompleted: 12,
-      },
-      'portuguese': {
-        subjectId: 'portuguese',
-        level: 3,
-        progress: 40,
-        xp: 280,
-        miniGamesCompleted: 8,
-      },
-      'science': {
-        subjectId: 'science',
-        level: 4,
-        progress: 55,
-        xp: 380,
-        miniGamesCompleted: 10,
-      },
-      'history': {
-        subjectId: 'history',
-        level: 2,
-        progress: 25,
-        xp: 150,
-        miniGamesCompleted: 5,
-      },
-      'geography': {
-        subjectId: 'geography',
-        level: 3,
-        progress: 35,
-        xp: 240,
-        miniGamesCompleted: 7,
-      },
-      'english': {
-        subjectId: 'english',
-        level: 4,
-        progress: 60,
-        xp: 420,
-        miniGamesCompleted: 11,
-      },
-      'physical-ed': {
-        subjectId: 'physical-ed',
-        level: 2,
-        progress: 30,
-        xp: 200,
-        miniGamesCompleted: 6,
-      },
-      'art': {
-        subjectId: 'art',
-        level: 3,
-        progress: 45,
-        xp: 310,
-        miniGamesCompleted: 9,
-      },
-      'music': {
-        subjectId: 'music',
-        level: 2,
-        progress: 20,
-        xp: 140,
-        miniGamesCompleted: 4,
-      },
-      'philosophy': {
-        subjectId: 'philosophy',
-        level: 1,
-        progress: 10,
-        xp: 70,
-        miniGamesCompleted: 2,
-      },
-      'ethics': {
-        subjectId: 'ethics',
-        level: 2,
-        progress: 28,
-        xp: 190,
-        miniGamesCompleted: 5,
-      },
-      'computer-science': {
-        subjectId: 'computer-science',
-        level: 3,
-        progress: 50,
-        xp: 360,
-        miniGamesCompleted: 10,
-      },
-      'spanish': {
-        subjectId: 'spanish',
-        level: 2,
-        progress: 22,
-        xp: 160,
-        miniGamesCompleted: 4,
-      },
+    const loadData = async () => {
+      try {
+        // Check auth status
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!session?.user);
+
+        // Load gamification stats (from local or cloud)
+        const localGameStats = loadGameStatsLocally();
+        let gameXP = localGameStats?.xp ?? 0;
+        let gameLevel = localGameStats?.level ?? 1;
+        let messagesSent = localGameStats?.messagesSent ?? 0;
+        let scenariosCompleted = localGameStats?.scenariosCompleted ?? 0;
+        let daysStreak = localGameStats?.daysStreak ?? 0;
+        let badges = localGameStats?.unlockedAchievements?.length ?? 0;
+
+        if (session?.user) {
+          const cloudGameStats = await loadGameStatsFromCloud();
+          if (cloudGameStats) {
+            gameXP = Math.max(gameXP, cloudGameStats.xp);
+            gameLevel = Math.max(gameLevel, cloudGameStats.level);
+            messagesSent = Math.max(messagesSent, cloudGameStats.messagesSent);
+            scenariosCompleted = Math.max(scenariosCompleted, cloudGameStats.scenariosCompleted);
+            daysStreak = Math.max(daysStreak, cloudGameStats.daysStreak);
+            badges = Math.max(badges, cloudGameStats.unlockedAchievements?.length ?? 0);
+          }
+        }
+
+        // Load dashboard-specific data (subject progress)
+        const localDashboard = loadDashboardLocally();
+        let dashboardData: DashboardData | null = localDashboard;
+
+        if (session?.user) {
+          const cloudDashboard = await loadDashboardDataFromCloud();
+          dashboardData = mergeDashboardData(localDashboard, cloudDashboard);
+        }
+
+        // Set subject progress
+        if (dashboardData?.subjectProgress && Object.keys(dashboardData.subjectProgress).length > 0) {
+          setSubjectProgress(dashboardData.subjectProgress);
+        } else {
+          setSubjectProgress(createDefaultSubjectProgress());
+        }
+
+        // Calculate total mini games across subjects
+        let totalMiniGames = 0;
+        if (dashboardData?.subjectProgress) {
+          Object.values(dashboardData.subjectProgress).forEach(p => {
+            totalMiniGames += p.miniGamesCompleted || 0;
+          });
+        }
+
+        // Count subjects with progress > 0
+        let subjectsExplored = 0;
+        if (dashboardData?.subjectProgress) {
+          Object.values(dashboardData.subjectProgress).forEach(p => {
+            if (p.xp > 0 || p.miniGamesCompleted > 0) subjectsExplored++;
+          });
+        }
+
+        // Calculate global level from XP
+        const levelObj = calculateLevel(gameXP);
+
+        setStats({
+          totalXP: gameXP,
+          totalLevel: levelObj.level,
+          totalBadges: badges,
+          currentStreak: daysStreak,
+          subjectsCompleted: subjectsExplored,
+          miniGamesPlayed: totalMiniGames,
+          leaderboardRank: 0, // Could be computed later
+        });
+
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+        // Fallback to empty defaults
+        setSubjectProgress(createDefaultSubjectProgress());
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setSubjectProgress(mockProgress);
-
-    const mockStats: UserDashboardStats = {
-      totalXP: 3740,
-      totalLevel: 36,
-      totalBadges: 28,
-      currentStreak: 12,
-      subjectsCompleted: 6,
-      miniGamesPlayed: 93,
-      leaderboardRank: 45,
-    };
-
-    setStats(mockStats);
-    setIsLoading(false);
+    loadData();
   }, [userId]);
 
   const handleSubjectSelect = (subjectId: string) => {
@@ -196,8 +222,41 @@ export function StudentDashboard({ userId, onNavigateTo }: StudentDashboardProps
         subjectId={selectedSubject}
         onComplete={(result) => {
           console.log('Mini-game completed:', result);
+          
+          // Update subject progress (auto-save effect will persist)
+          setSubjectProgress(prev => {
+            const current = prev[selectedSubject] || {
+              subjectId: selectedSubject,
+              level: 1,
+              progress: 0,
+              xp: 0,
+              miniGamesCompleted: 0,
+              messagesExchanged: 0,
+            };
+            const xpGained = result?.xpEarned ?? result?.score ?? 50;
+            const newXp = (current.xp || 0) + xpGained;
+            const newLevel = Math.floor(newXp / 200) + 1; // level up every 200 xp
+            return {
+              ...prev,
+              [selectedSubject]: {
+                ...current,
+                miniGamesCompleted: (current.miniGamesCompleted || 0) + 1,
+                xp: newXp,
+                level: newLevel,
+                progress: Math.min(100, (current.progress || 0) + 5),
+                lastActivityAt: new Date().toISOString(),
+              },
+            };
+          });
+
+          // Update global stats
+          setStats(prev => ({
+            ...prev,
+            miniGamesPlayed: prev.miniGamesPlayed + 1,
+            totalXP: prev.totalXP + (result?.xpEarned ?? result?.score ?? 50),
+          }));
+
           setPlayingMiniGame(false);
-          // Aqui você pode atualizar o progresso
         }}
         onQuit={() => {
           setPlayingMiniGame(false);

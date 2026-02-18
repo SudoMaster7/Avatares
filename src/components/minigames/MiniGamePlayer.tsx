@@ -14,11 +14,34 @@ import { DragDropGame } from './DragDropGame';
 import { PuzzleGame } from './PuzzleGame';
 import { GameCompletionOverlay } from '@/components/GameCompletionOverlay';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import type { MiniGame, GameResult } from '@/types/minigames';
 import type { BadgeType } from '@/lib/badges-streaks';
 import { MINI_GAMES } from '@/lib/minigames';
 import { getMiniGamesBySubject, type MiniGameData } from '@/lib/minigames-data';
 import { processGameResult } from '@/lib/badges-streaks';
+
+// ─── Shuffle helper ────────────────────────────────────────────────────────
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Shuffle questions array and shuffle options within each question
+function randomizeGame(game: MiniGame): MiniGame {
+  const shuffledQuestions = shuffle(game.questions).map(q => {
+    if (!q.options || q.options.length === 0) return q;
+    // Shuffle the options, preserving correctAnswer value
+    const shuffledOptions = shuffle(q.options);
+    return { ...q, options: shuffledOptions };
+  });
+  return { ...game, questions: shuffledQuestions };
+}
 
 interface MiniGamePlayerProps {
   subjectId: string;
@@ -112,6 +135,7 @@ export function MiniGamePlayer({
   const [gameStarted, setGameStarted] = useState(false);
   const [result, setResult] = useState<GameResult | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [completionData, setCompletionData] = useState<{
     xpEarned: number;
     streakCount: number;
@@ -132,6 +156,54 @@ export function MiniGamePlayer({
     const oldGames = MINI_GAMES.filter((g) => g.subject === subjectId);
     return oldGames;
   }, [subjectId]);
+
+  // Fetch AI-generated questions and merge with static game
+  const loadGameWithAI = async (game: MiniGame): Promise<MiniGame> => {
+    // Only AI-enhance compatible types
+    const aiCompatible = ['quiz', 'truefalse', 'fillblank', 'speedchallenge'];
+    if (!aiCompatible.includes(game.type)) {
+      return randomizeGame(game);
+    }
+
+    try {
+      const res = await fetch('/api/minigame-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subjectId,
+          gameType: game.type,
+          difficulty: game.difficulty === 'fácil' ? 'fácil' : game.difficulty === 'difícil' ? 'difícil' : 'médio',
+          count: 5,
+        }),
+      });
+
+      if (!res.ok) throw new Error('AI fetch failed');
+      const data = await res.json();
+
+      if (data.questions && data.questions.length > 0) {
+        // Mix AI questions (first 5) with shuffled static questions (last few)
+        const staticShuffled = shuffle(game.questions).slice(0, 3);
+        const mixed = shuffle([...data.questions, ...staticShuffled]);
+        return { ...game, questions: mixed };
+      }
+    } catch (err) {
+      console.warn('AI questions failed, using static:', err);
+    }
+
+    // Fallback: just shuffle static questions
+    return randomizeGame(game);
+  };
+
+  const handleStartGame = async (game: MiniGame) => {
+    setAiLoading(true);
+    try {
+      const enriched = await loadGameWithAI(game);
+      setSelectedGame(enriched);
+      setGameStarted(true);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleGameComplete = (gameResult: GameResult) => {
     setResult(gameResult);
@@ -388,6 +460,18 @@ export function MiniGamePlayer({
     );
   }
 
+  if (aiLoading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
+        <div className="text-center">
+          <Loader2 className="w-14 h-14 animate-spin text-blue-600 mx-auto mb-5" />
+          <p className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">Gerando perguntas com IA...</p>
+          <p className="text-gray-500 dark:text-gray-400">Preparando um jogo único para você ✨</p>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedGame && !gameStarted) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-900 dark:to-slate-800">
@@ -416,7 +500,7 @@ export function MiniGamePlayer({
               Voltar
             </Button>
             <Button
-              onClick={() => setGameStarted(true)}
+              onClick={() => handleStartGame(selectedGame!)}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-lg"
             >
               Começar 🚀
@@ -469,7 +553,7 @@ export function MiniGamePlayer({
           {gamesForSubject.map((game, idx) => (
             <motion.button
               key={game.id}
-              onClick={() => setSelectedGame(game)}
+              onClick={() => handleStartGame(game)}
               variants={{
                 hidden: { opacity: 0, y: 20 },
                 visible: { opacity: 1, y: 0 },
@@ -478,14 +562,16 @@ export function MiniGamePlayer({
               className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all text-left border-2 border-transparent hover:border-blue-500"
             >
               <div className="text-4xl mb-3">
-                {game.type === 'quiz'
-                  ? '❓'
-                  : game.type === 'truefalse'
-                  ? '✓✗'
-                  : game.type === 'fillblank'
-                  ? '📝'
-                  : game.type === 'matching'
-                  ? '🔗'
+                {game.type === 'quiz' ? '❓'
+                  : game.type === 'truefalse' ? '✅'
+                  : game.type === 'fillblank' ? '📝'
+                  : game.type === 'matching' ? '🔗'
+                  : game.type === 'memory' ? '🧠'
+                  : game.type === 'timeline' ? '📅'
+                  : game.type === 'speedchallenge' ? '⚡'
+                  : game.type === 'wordscramble' ? '🔤'
+                  : game.type === 'dragdrop' ? '🖱️'
+                  : game.type === 'puzzle' ? '🧩'
                   : '🎯'}
               </div>
 

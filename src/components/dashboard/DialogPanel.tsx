@@ -93,7 +93,7 @@ export function DialogPanel({ avatar, subjectName, isOpen, onClose }: DialogPane
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
+        content: response.content,
         timestamp: new Date(),
       };
 
@@ -102,7 +102,7 @@ export function DialogPanel({ avatar, subjectName, isOpen, onClose }: DialogPane
       // Speak response
       setIsSpeaking(true);
       await speak({
-        text: response,
+        text: response.content,
         language: avatar.language,
         // ElevenLabs configuration
         elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,

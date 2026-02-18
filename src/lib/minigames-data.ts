@@ -4,7 +4,7 @@
 export interface MiniGameData {
   id: string;
   subject: string;
-  type: 'dragdrop' | 'wordscramble' | 'memory' | 'timeline' | 'speedchallenge' | 'puzzle';
+  type: 'dragdrop' | 'wordscramble' | 'memory' | 'timeline' | 'speedchallenge' | 'puzzle' | 'quiz' | 'truefalse' | 'fillblank';
   title: string;
   description: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
@@ -942,72 +942,618 @@ export const MINIGAMES_DB: MiniGameData[] = [
       },
     ],
   },
+
+  // ===== MATEMATICA – Quiz / TrueFalse / FillBlank =====
+  {
+    id: 'math-quiz-1',
+    subject: 'Matematica',
+    type: 'quiz',
+    title: 'Quiz: Matematica Basica',
+    description: 'Teste seus conhecimentos de matematica com perguntas variadas',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'Qual o resultado de 8 x 9?', options: ['63', '72', '81', '64'], correctAnswer: '72' },
+      { question: 'Qual a raiz quadrada de 144?', options: ['10', '12', '14', '16'], correctAnswer: '12' },
+      { question: 'Triangulo com lados 3, 4 e 5 e...', options: ['Equilatero', 'Isosceles', 'Retangulo', 'Obtusangulo'], correctAnswer: 'Retangulo' },
+      { question: 'Quantos lados tem um hexagono?', options: ['5', '6', '7', '8'], correctAnswer: '6' },
+      { question: 'O valor de pi aproximado e...', options: ['2,71', '3,14', '1,41', '1,73'], correctAnswer: '3,14' },
+      { question: '25% de 200 e...', options: ['25', '40', '50', '75'], correctAnswer: '50' },
+    ],
+  },
+  {
+    id: 'math-truefalse-1',
+    subject: 'Matematica',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Numeros',
+    description: 'Avalie se as afirmacoes matematicas sao verdadeiras ou falsas',
+    difficulty: 'beginner',
+    maxScore: 400,
+    timeLimit: 60,
+    questions: [
+      { question: 'O numero 0 e par.', correctAnswer: 'true' },
+      { question: 'Todo quadrado e um retangulo.', correctAnswer: 'true' },
+      { question: '1 e um numero primo.', correctAnswer: 'false' },
+      { question: 'A soma dos angulos internos de um triangulo e 180 graus.', correctAnswer: 'true' },
+      { question: 'A raiz quadrada de 2 e um numero racional.', correctAnswer: 'false' },
+      { question: 'Um numero divisivel por 6 tambem e divisivel por 3.', correctAnswer: 'true' },
+    ],
+  },
+  {
+    id: 'math-fillblank-1',
+    subject: 'Matematica',
+    type: 'fillblank',
+    title: 'Preencha: Formulas Matematicas',
+    description: 'Complete as formulas e equacoes matematicas',
+    difficulty: 'intermediate',
+    maxScore: 600,
+    questions: [
+      { question: 'A area de um circulo e A = _____ x r ao quadrado', correctAnswer: 'pi' },
+      { question: 'Teorema de Pitagoras: a2 + b2 = _____', correctAnswer: 'c2' },
+      { question: 'Formula de Bhaskara: x = (-b mais ou menos raiz(b2-4ac)) / _____', correctAnswer: '2a' },
+    ],
+  },
+
+  // ===== PORTUGUES – Quiz / TrueFalse / FillBlank =====
+  {
+    id: 'port-quiz-1',
+    subject: 'Portugues',
+    type: 'quiz',
+    title: 'Quiz: Gramatica e Literatura',
+    description: 'Teste seus conhecimentos de lingua portuguesa',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'Qual a classe gramatical de "rapidamente"?', options: ['Adjetivo', 'Adverbio', 'Substantivo', 'Verbo'], correctAnswer: 'Adverbio' },
+      { question: 'Quem escreveu Dom Casmurro?', options: ['Jose de Alencar', 'Machado de Assis', 'Clarice Lispector', 'Guimaraes Rosa'], correctAnswer: 'Machado de Assis' },
+      { question: 'Qual figura de linguagem em "O ceu chorava"?', options: ['Metonimia', 'Personificacao', 'Hiperbole', 'Metafora'], correctAnswer: 'Personificacao' },
+      { question: 'Plural correto de cidadao:', options: ['cidadoes', 'cidadaos', 'cidadais', 'cidadois'], correctAnswer: 'cidadaos' },
+      { question: 'O Realismo brasileiro iniciou em...', options: ['1822', '1836', '1881', '1922'], correctAnswer: '1881' },
+    ],
+  },
+  {
+    id: 'port-truefalse-1',
+    subject: 'Portugues',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Gramatica',
+    description: 'Verifique o uso correto da lingua portuguesa',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'A palavra farmacia tem acento correto.', correctAnswer: 'true' },
+      { question: 'Ter e haver tem o mesmo significado em todos os contextos.', correctAnswer: 'false' },
+      { question: 'Mal e mau sao de classes gramaticais diferentes.', correctAnswer: 'true' },
+      { question: 'Pronomes obliquos podem ser sujeito da oracao.', correctAnswer: 'false' },
+      { question: 'Virgula deve preceder a conjuncao "e" sempre.', correctAnswer: 'false' },
+    ],
+  },
+
+  // ===== ENGLISH – Quiz / TrueFalse / FillBlank =====
+  {
+    id: 'eng-quiz-1',
+    subject: 'English',
+    type: 'quiz',
+    title: 'Quiz: English Grammar',
+    description: 'Test your English grammar and vocabulary knowledge',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'Which is correct: "I ____ to school every day."', options: ['go', 'goes', 'going', 'went'], correctAnswer: 'go' },
+      { question: 'Past tense of "eat" is:', options: ['eated', 'ate', 'eaten', 'ets'], correctAnswer: 'ate' },
+      { question: 'Correct article: "____ umbrella"', options: ['a', 'an', 'the', 'no article'], correctAnswer: 'an' },
+      { question: 'Correct sentence:', options: ["She don't like coffee.", "She doesn't likes coffee.", "She doesn't like coffee.", "She not like coffee."], correctAnswer: "She doesn't like coffee." },
+      { question: 'What does gorgeous mean?', options: ['horrible', 'extremely beautiful', 'angry', 'tired'], correctAnswer: 'extremely beautiful' },
+      { question: 'Plural of child:', options: ['childs', 'childes', 'children', 'childrens'], correctAnswer: 'children' },
+    ],
+  },
+  {
+    id: 'eng-truefalse-1',
+    subject: 'English',
+    type: 'truefalse',
+    title: 'True or False: English Rules',
+    description: 'Decide if these English statements are true or false',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: '"Much" is used with countable nouns.', correctAnswer: 'false' },
+      { question: 'Present Perfect uses have/has + past participle.', correctAnswer: 'true' },
+      { question: '"Advice" has a plural form "advices".', correctAnswer: 'false' },
+      { question: 'In English, adjectives go before the noun.', correctAnswer: 'true' },
+      { question: '"Since" is used for a duration like "since 3 hours".', correctAnswer: 'false' },
+    ],
+  },
+  {
+    id: 'eng-fillblank-1',
+    subject: 'English',
+    type: 'fillblank',
+    title: 'Fill in the Blank: Prepositions',
+    description: 'Complete sentences with the correct prepositions',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    questions: [
+      { question: "I'm interested _____ learning English.", correctAnswer: 'in' },
+      { question: "She's been here _____ Monday.", correctAnswer: 'since' },
+      { question: 'We arrived _____ the airport at 6pm.', correctAnswer: 'at' },
+      { question: 'He is afraid _____ spiders.', correctAnswer: 'of' },
+    ],
+  },
+
+  // ===== HISTORIA – Quiz / TrueFalse =====
+  {
+    id: 'hist-quiz-1',
+    subject: 'Historia',
+    type: 'quiz',
+    title: 'Quiz: Grandes Eventos Historicos',
+    description: 'Teste seus conhecimentos sobre eventos historicos marcantes',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'Em que ano foi proclamada a Independencia do Brasil?', options: ['1808', '1815', '1822', '1889'], correctAnswer: '1822' },
+      { question: 'A Revolucao Francesa comecou em:', options: ['1776', '1789', '1804', '1815'], correctAnswer: '1789' },
+      { question: 'Lider da Inconfidencia Mineira:', options: ['D. Joao VI', 'Tiradentes', 'Jose Bonifacio', 'Caxias'], correctAnswer: 'Tiradentes' },
+      { question: 'A abolicao da escravatura no Brasil ocorreu em:', options: ['1850', '1871', '1888', '1889'], correctAnswer: '1888' },
+      { question: 'Quem construiu as piramides de Gize?', options: ['Mesopotamia', 'Grecia Antiga', 'Roma', 'Egito Antigo'], correctAnswer: 'Egito Antigo' },
+    ],
+  },
+  {
+    id: 'hist-truefalse-1',
+    subject: 'Historia',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Historia do Brasil',
+    description: 'Avalie afirmacoes sobre a historia brasileira',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'D. Pedro I proclamou a Independencia em 7 de setembro de 1822.', correctAnswer: 'true' },
+      { question: 'O Brasil foi colonia da Espanha.', correctAnswer: 'false' },
+      { question: 'A Republica foi proclamada em 1889.', correctAnswer: 'true' },
+      { question: 'Getulio Vargas governou o Brasil apenas uma vez.', correctAnswer: 'false' },
+      { question: 'A capital do Brasil sempre foi Brasilia.', correctAnswer: 'false' },
+    ],
+  },
+
+  // ===== CIENCIAS – Quiz / TrueFalse / FillBlank =====
+  {
+    id: 'sci-quiz-1',
+    subject: 'Ciencias',
+    type: 'quiz',
+    title: 'Quiz: Ciencias Naturais',
+    description: 'Teste seus conhecimentos sobre ciencias e o mundo natural',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'Qual organela e responsavel pela fotossintese?', options: ['Mitocondria', 'Ribossomo', 'Cloroplasto', 'Vacuolo'], correctAnswer: 'Cloroplasto' },
+      { question: 'Qual o simbolo quimico do ouro?', options: ['Or', 'Go', 'Au', 'Ag'], correctAnswer: 'Au' },
+      { question: 'A velocidade da luz no vacuo e aproximadamente:', options: ['300 km/s', '300.000 km/s', '30.000 km/s', '3.000.000 km/s'], correctAnswer: '300.000 km/s' },
+      { question: 'Qual gas e essencial para a respiracao humana?', options: ['CO2', 'N2', 'O2', 'H2'], correctAnswer: 'O2' },
+      { question: 'DNA significa:', options: ['Acido Desoxirribonucleico', 'Acido Nucleico Duplo', 'Dinucleotideo Ativo', 'Doador Nuclear Ativo'], correctAnswer: 'Acido Desoxirribonucleico' },
+    ],
+  },
+  {
+    id: 'sci-truefalse-1',
+    subject: 'Ciencias',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Ciencias',
+    description: 'Avalie se as afirmacoes cientificas sao corretas',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'Os seres humanos tem 46 cromossomos.', correctAnswer: 'true' },
+      { question: 'A Lua e uma estrela.', correctAnswer: 'false' },
+      { question: 'A agua ferve a 100 graus Celsius ao nivel do mar.', correctAnswer: 'true' },
+      { question: 'Os virus sao seres vivos com celulas proprias.', correctAnswer: 'false' },
+      { question: 'O coracao humano tem quatro camaras.', correctAnswer: 'true' },
+    ],
+  },
+  {
+    id: 'sci-fillblank-1',
+    subject: 'Ciencias',
+    type: 'fillblank',
+    title: 'Preencha: Conceitos Cientificos',
+    description: 'Complete as definicoes e formulas cientificas',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    questions: [
+      { question: 'A formula quimica da agua e _____', correctAnswer: 'H2O' },
+      { question: 'Segunda Lei de Newton: F = m x _____', correctAnswer: 'a' },
+      { question: 'A fotossintese produz glicose e _____', correctAnswer: 'oxigenio' },
+    ],
+  },
+
+  // ===== GEOGRAFIA – Quiz / TrueFalse =====
+  {
+    id: 'geo-quiz-1',
+    subject: 'Geografia',
+    type: 'quiz',
+    title: 'Quiz: Mundo e Brasil',
+    description: 'Teste seus conhecimentos geograficos',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'Qual o maior rio do mundo em volume de agua?', options: ['Nilo', 'Amazonas', 'Yangtze', 'Mississippi'], correctAnswer: 'Amazonas' },
+      { question: 'Qual a capital do Brasil?', options: ['Sao Paulo', 'Rio de Janeiro', 'Salvador', 'Brasilia'], correctAnswer: 'Brasilia' },
+      { question: 'Quantos continentes existem na Terra?', options: ['5', '6', '7', '8'], correctAnswer: '7' },
+      { question: 'O deserto do Saara fica em qual continente?', options: ['Asia', 'America', 'Africa', 'Oceania'], correctAnswer: 'Africa' },
+      { question: 'Brasil faz fronteira com todos, exceto:', options: ['Argentina', 'Bolivia', 'Chile', 'Uruguai'], correctAnswer: 'Chile' },
+    ],
+  },
+  {
+    id: 'geo-truefalse-1',
+    subject: 'Geografia',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Geografia',
+    description: 'Avalie afirmacoes sobre o planeta e o Brasil',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'O Brasil esta localizado inteiramente no hemisferio sul.', correctAnswer: 'false' },
+      { question: 'O Rio Amazonas deságua no Oceano Atlantico.', correctAnswer: 'true' },
+      { question: 'Tokyo e a cidade mais populosa do mundo.', correctAnswer: 'true' },
+      { question: 'A Australia e ao mesmo tempo um pais e um continente.', correctAnswer: 'true' },
+    ],
+  },
+
+  // ===== EDUCACAO FISICA – Quiz / TrueFalse =====
+  {
+    id: 'edf-quiz-1',
+    subject: 'Educacao Fisica',
+    type: 'quiz',
+    title: 'Quiz: Esportes e Saude',
+    description: 'Teste seus conhecimentos sobre esportes, regras e saude',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    questions: [
+      { question: 'Quantos jogadores tem um time de futebol em campo?', options: ['9', '10', '11', '12'], correctAnswer: '11' },
+      { question: 'Qual esporte usa rede de 2,43m de altura?', options: ['Tenis', 'Volei masculino', 'Badminton', 'Basquete'], correctAnswer: 'Volei masculino' },
+      { question: 'Frequencia cardiaca maxima estimada: _____ menos a idade', options: ['180', '200', '220', '240'], correctAnswer: '220' },
+      { question: 'Quantas calorias tem 1g de proteina?', options: ['4', '7', '9', '12'], correctAnswer: '4' },
+      { question: 'Qual vitamina e sintetizada pelo sol?', options: ['Vitamina A', 'Vitamina B12', 'Vitamina C', 'Vitamina D'], correctAnswer: 'Vitamina D' },
+    ],
+  },
+  {
+    id: 'edf-truefalse-1',
+    subject: 'Educacao Fisica',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Saude e Esporte',
+    description: 'Avalie afirmacoes sobre saude, corpo e esportes',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'O corpo humano adulto tem 206 ossos.', correctAnswer: 'true' },
+      { question: 'Correr e um exercicio anaerobico.', correctAnswer: 'false' },
+      { question: 'OMS recomenda 150 minutos de atividade fisica por semana.', correctAnswer: 'true' },
+      { question: 'Beber agua durante o exercicio prejudica o desempenho.', correctAnswer: 'false' },
+    ],
+  },
+
+  // ===== ARTE – Quiz / TrueFalse =====
+  {
+    id: 'art-quiz-1',
+    subject: 'Arte',
+    type: 'quiz',
+    title: 'Quiz: Historia da Arte',
+    description: 'Teste seus conhecimentos sobre arte e artistas',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    timeLimit: 90,
+    questions: [
+      { question: 'Quem pintou a Ultima Ceia?', options: ['Rafael', 'Michelangelo', 'Leonardo da Vinci', 'Caravaggio'], correctAnswer: 'Leonardo da Vinci' },
+      { question: 'O movimento que explorou sonhos e o inconsciente foi o...', options: ['Impressionismo', 'Cubismo', 'Surrealismo', 'Expressionismo'], correctAnswer: 'Surrealismo' },
+      { question: 'Quem criou A Guernica?', options: ['Salvador Dali', 'Pablo Picasso', 'Henri Matisse', 'Giorgio de Chirico'], correctAnswer: 'Pablo Picasso' },
+      { question: 'O Pensador e uma escultura de...', options: ['Bernini', 'Rodin', 'Michelangelo', 'Brancusi'], correctAnswer: 'Rodin' },
+      { question: 'O Impressionismo surgiu em qual pais?', options: ['Italia', 'Alemanha', 'Franca', 'Espanha'], correctAnswer: 'Franca' },
+    ],
+  },
+  {
+    id: 'art-truefalse-1',
+    subject: 'Arte',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Arte Brasileira',
+    description: 'Avalie fatos sobre arte e cultura brasileira',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'Tarsila do Amaral pintou Abaporu.', correctAnswer: 'true' },
+      { question: 'O Modernismo brasileiro comecou com a Semana de Arte Moderna de 1922.', correctAnswer: 'true' },
+      { question: 'O Barroco e um movimento artistico do seculo XX.', correctAnswer: 'false' },
+    ],
+  },
+
+  // ===== MUSICA – Quiz / TrueFalse =====
+  {
+    id: 'mus-quiz-1',
+    subject: 'Musica',
+    type: 'quiz',
+    title: 'Quiz: Teoria e Historia Musical',
+    description: 'Teste seus conhecimentos sobre musica',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    questions: [
+      { question: 'Quantas notas na escala diatonica?', options: ['5', '7', '8', '12'], correctAnswer: '7' },
+      { question: 'Qual instrumento tem 88 teclas?', options: ['Acordeao', 'Orgao', 'Piano', 'Cravo'], correctAnswer: 'Piano' },
+      { question: 'Qual foi a ultima sinfonia de Beethoven?', options: ['7a', '8a', '9a', '10a'], correctAnswer: '9a' },
+      { question: 'O samba e originario de qual pais?', options: ['Angola', 'Cuba', 'Brasil', 'Portugal'], correctAnswer: 'Brasil' },
+      { question: 'Qual signo musical indica silencio?', options: ['Clave', 'Pausa', 'Fermata', 'Ligadura'], correctAnswer: 'Pausa' },
+    ],
+  },
+
+  // ===== FILOSOFIA – Quiz / TrueFalse =====
+  {
+    id: 'fil-quiz-1',
+    subject: 'Filosofia',
+    type: 'quiz',
+    title: 'Quiz: Grandes Filosofos',
+    description: 'Teste seus conhecimentos sobre filosofia e pensadores',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    timeLimit: 90,
+    questions: [
+      { question: '"Penso, logo existo" e uma frase de...', options: ['Kant', 'Descartes', 'Nietzsche', 'Platao'], correctAnswer: 'Descartes' },
+      { question: 'Qual filosofo escreveu A Republica?', options: ['Socrates', 'Aristoteles', 'Platao', 'Epicuro'], correctAnswer: 'Platao' },
+      { question: 'O que estuda a Etica?', options: ['A beleza', 'O conhecimento', 'O comportamento moral', 'A logica'], correctAnswer: 'O comportamento moral' },
+      { question: '"Deus esta morto" foi dito por...', options: ['Schopenhauer', 'Hegel', 'Nietzsche', 'Sartre'], correctAnswer: 'Nietzsche' },
+    ],
+  },
+  {
+    id: 'fil-truefalse-1',
+    subject: 'Filosofia',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Filosofia',
+    description: 'Avalie afirmacoes filosoficas',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'Socrates escreveu sua filosofia em livros.', correctAnswer: 'false' },
+      { question: 'O Empirismo defende que o conhecimento vem da experiencia sensorial.', correctAnswer: 'true' },
+      { question: 'Marx e Engels escreveram o Manifesto Comunista.', correctAnswer: 'true' },
+    ],
+  },
+
+  // ===== RELIGIAO/ETICA – Quiz =====
+  {
+    id: 'rel-quiz-1',
+    subject: 'Religiao/Etica',
+    type: 'quiz',
+    title: 'Quiz: Etica e Valores',
+    description: 'Teste seus conhecimentos sobre etica, valores e religioes',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    questions: [
+      { question: 'A regra de ouro aparece em...', options: ['Apenas o Cristianismo', 'Apenas o Isla', 'Diversas religioes e culturas', 'Apenas o Budismo'], correctAnswer: 'Diversas religioes e culturas' },
+      { question: 'Qual o livro sagrado do Islamismo?', options: ['Biblia', 'Tora', 'Alcorao', 'Vedas'], correctAnswer: 'Alcorao' },
+      { question: 'Etica estuda...', options: ['Leis juridicas', 'Comportamento moral e valores', 'Tradicoes religiosas', 'Costumes culturais'], correctAnswer: 'Comportamento moral e valores' },
+      { question: 'Qual filosofo criou o Imperativo Categorico?', options: ['Platao', 'Socrates', 'Kant', 'Aristoteles'], correctAnswer: 'Kant' },
+    ],
+  },
+
+  // ===== INFORMATICA – Quiz / TrueFalse / FillBlank =====
+  {
+    id: 'info-quiz-1',
+    subject: 'Informatica',
+    type: 'quiz',
+    title: 'Quiz: Tecnologia e Programacao',
+    description: 'Teste seus conhecimentos sobre computacao e tecnologia',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    streakBonus: true,
+    questions: [
+      { question: 'O que significa HTML?', options: ['High Tech Markup Language', 'HyperText Markup Language', 'Hyperlink Text Markup Language', 'Home Tool Markup Language'], correctAnswer: 'HyperText Markup Language' },
+      { question: 'Qual estrutura e "primeiro a entrar, primeiro a sair"?', options: ['Pilha', 'Fila', 'Arvore', 'Grafo'], correctAnswer: 'Fila' },
+      { question: 'O resultado de 2 elevado a 8 e:', options: ['128', '256', '512', '64'], correctAnswer: '256' },
+      { question: 'CPU significa:', options: ['Central Processing Unit', 'Computer Power Unit', 'Core Processing Utility', 'Central Program Unit'], correctAnswer: 'Central Processing Unit' },
+      { question: 'Qual linguagem estiliza paginas web?', options: ['JavaScript', 'HTML', 'CSS', 'Python'], correctAnswer: 'CSS' },
+    ],
+  },
+  {
+    id: 'info-truefalse-1',
+    subject: 'Informatica',
+    type: 'truefalse',
+    title: 'Verdadeiro ou Falso: Computacao',
+    description: 'Avalie afirmacoes sobre tecnologia e computacao',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'Um byte e composto por 8 bits.', correctAnswer: 'true' },
+      { question: 'Python e uma linguagem compilada.', correctAnswer: 'false' },
+      { question: 'RAM e um tipo de memoria volatil.', correctAnswer: 'true' },
+      { question: 'O sistema binario usa os digitos 0, 1 e 2.', correctAnswer: 'false' },
+    ],
+  },
+  {
+    id: 'info-fillblank-1',
+    subject: 'Informatica',
+    type: 'fillblank',
+    title: 'Preencha: Programacao',
+    description: 'Complete os conceitos de programacao',
+    difficulty: 'intermediate',
+    maxScore: 500,
+    questions: [
+      { question: 'O loop que executa enquanto a condicao e verdadeira chama-se _____', correctAnswer: 'while' },
+      { question: 'Em JavaScript, para declarar variavel imutavel usa-se _____', correctAnswer: 'const' },
+    ],
+  },
+
+  // ===== ESPANHOL – Quiz / FillBlank =====
+  {
+    id: 'esp-quiz-1',
+    subject: 'Espanhol',
+    type: 'quiz',
+    title: 'Quiz: Espanol Basico',
+    description: 'Teste tus conocimientos de espanol',
+    difficulty: 'beginner',
+    maxScore: 500,
+    timeLimit: 90,
+    questions: [
+      { question: 'Como se dice obrigado en espanol?', options: ['Por favor', 'Gracias', 'De nada', 'Hola'], correctAnswer: 'Gracias' },
+      { question: 'Articulo correto: "_____ libro"', options: ['la', 'las', 'los', 'el'], correctAnswer: 'el' },
+      { question: '"Yo _____ estudiante" – verbo correto:', options: ['soy', 'estoy', 'tengo', 'hay'], correctAnswer: 'soy' },
+      { question: 'Que significa mariposa?', options: ['borboleta', 'formiga', 'abelha', 'libelula'], correctAnswer: 'borboleta' },
+      { question: 'Plural de el nino e...', options: ['los nino', 'las ninos', 'los ninos', 'el ninos'], correctAnswer: 'los ninos' },
+    ],
+  },
+  {
+    id: 'esp-fillblank-1',
+    subject: 'Espanhol',
+    type: 'fillblank',
+    title: 'Completa: Verbos en Espanol',
+    description: 'Completa las oraciones con el verbo correcto',
+    difficulty: 'beginner',
+    maxScore: 400,
+    questions: [
+      { question: 'Ella _____ (hablar) muy rapido.', correctAnswer: 'habla' },
+      { question: 'Tu _____ (querer) ir al cine?', correctAnswer: 'quieres' },
+    ],
+  },
 ];
 
 export const SUBJECT_MAPPING: Record<string, string> = {
+  // Matemática
   'math': 'Matemática',
-  'matemática': 'Matemática',
-  'português': 'Português',
+  'matematica': 'Matemática',
+  'Matematica': 'Matemática',
+  'Matemática': 'Matemática',
+  // Português
+  'portugues': 'Português',
   'portuguese': 'Português',
-  'portugu': 'Português',
+  'Portugues': 'Português',
+  'Português': 'Português',
+  // English / Inglês
   'english': 'English',
-  'inglês': 'English',
   'ingles': 'English',
-  'história': 'História',
+  'inglês': 'English',
+  'English': 'English',
+  // História
+  'historia': 'História',
   'history': 'História',
-  'ciências': 'Ciências',
-  'ciencia': 'Ciências',
+  'Historia': 'História',
+  'História': 'História',
+  // Ciências
+  'ciencias': 'Ciências',
   'science': 'Ciências',
-  'arte': 'Arte',
-  'art': 'Arte',
-  'educação física': 'Educação Física',
-  'educacao fisica': 'Educação Física',
-  'physical education': 'Educação Física',
-  'pe': 'Educação Física',
-  'biologia': 'Biologia',
-  'biology': 'Biologia',
-  'química': 'Química',
-  'quimica': 'Química',
-  'chemistry': 'Química',
+  'Ciencias': 'Ciências',
+  'Ciências': 'Ciências',
+  // Geografia
   'geografia': 'Geografia',
   'geography': 'Geografia',
-  'sociologia': 'Sociologia',
-  'sociology': 'Sociologia',
+  'Geografia': 'Geografia',
+  // Educação Física
+  'educacao-fisica': 'Educação Física',
+  'educacao fisica': 'Educação Física',
+  'physical-ed': 'Educação Física',
+  'Educacao Fisica': 'Educação Física',
+  'Educação Física': 'Educação Física',
+  // Arte
+  'arte': 'Arte',
+  'art': 'Arte',
+  'Arte': 'Arte',
+  // Música
+  'musica': 'Música',
+  'music': 'Música',
+  'Musica': 'Música',
+  'Música': 'Música',
+  // Filosofia
   'filosofia': 'Filosofia',
   'philosophy': 'Filosofia',
+  'Filosofia': 'Filosofia',
+  // Religião/Ética
+  'religiao': 'Religião/Ética',
+  'religiao/etica': 'Religião/Ética',
+  'ethics': 'Religião/Ética',
+  'Religiao/Etica': 'Religião/Ética',
+  'Religião/Ética': 'Religião/Ética',
+  // Informática
+  'informatica': 'Informática',
+  'computer-science': 'Informática',
+  'Informatica': 'Informática',
+  'Informática': 'Informática',
+  // Espanhol
+  'espanhol': 'Espanhol',
+  'spanish': 'Espanhol',
+  'Espanhol': 'Espanhol',
+  // Biologia
+  'biologia': 'Biologia',
+  'biology': 'Biologia',
+  'Biologia': 'Biologia',
+  // Química
+  'quimica': 'Química',
+  'chemistry': 'Química',
+  'Quimica': 'Química',
+  'Química': 'Química',
+  // Sociologia
+  'sociologia': 'Sociologia',
+  'sociology': 'Sociologia',
+  'Sociologia': 'Sociologia',
+};
+
+// Strips accents/diacritics and lowercases for fuzzy subject matching
+function normalizeSubject(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+    .replace(/[^a-z0-9]/g, '');      // keep only alphanumeric
+}
+
+// Map of canonical subject IDs → all possible name variants (accented + unaccented)
+const SUBJECT_ID_MAP: Record<string, string[]> = {
+  'math':            ['Matemática', 'Matematica'],
+  'portuguese':      ['Português', 'Portugues'],
+  'english':         ['English', 'Inglês', 'Ingles'],
+  'history':         ['História', 'Historia'],
+  'science':         ['Ciências', 'Ciencias'],
+  'geography':       ['Geografia'],
+  'physical-ed':     ['Educação Física', 'Educacao Fisica'],
+  'art':             ['Arte'],
+  'music':           ['Música', 'Musica'],
+  'philosophy':      ['Filosofia'],
+  'ethics':          ['Religião/Ética', 'Religiao/Etica'],
+  'computer-science':['Informática', 'Informatica'],
+  'spanish':         ['Espanhol'],
+  'biology':         ['Biologia'],
+  'chemistry':       ['Química', 'Quimica'],
+  'sociology':       ['Sociologia'],
 };
 
 export function getMiniGamesBySubject(subject: string): MiniGameData[] {
-  if (!subject) return [];
-  
-  // Normalize input
-  const normalized = subject.toLowerCase().trim();
-  
-  // Try mapping first
-  const mappedSubject = SUBJECT_MAPPING[normalized];
-  if (mappedSubject) {
-    const matches = MINIGAMES_DB.filter(game => game.subject === mappedSubject);
-    if (matches.length > 0) {
-      return matches;
+  const normInput = normalizeSubject(subject);
+
+  // 1. Try matching via canonical map keys
+  for (const [, variants] of Object.entries(SUBJECT_ID_MAP)) {
+    if (variants.some(v => normalizeSubject(v) === normInput)) {
+      // Return all games whose subject normalizes to any variant in this group
+      const normVariants = variants.map(normalizeSubject);
+      return MINIGAMES_DB.filter(game => normVariants.includes(normalizeSubject(game.subject)));
     }
   }
-  
-  // Try exact match
-  let matches = MINIGAMES_DB.filter(game => game.subject === subject);
-  if (matches.length > 0) return matches;
-  
-  // Try case-insensitive match
-  const lowerSubject = subject.toLowerCase();
-  matches = MINIGAMES_DB.filter(game => game.subject.toLowerCase() === lowerSubject);
-  if (matches.length > 0) return matches;
-  
-  // Try partial match (for translations)
-  matches = MINIGAMES_DB.filter(game => 
-    game.subject.toLowerCase().includes(lowerSubject) || 
-    lowerSubject.includes(game.subject.toLowerCase())
+
+  // 2. Fallback: check map keys (e.g. 'math', 'history')
+  const byKey = SUBJECT_ID_MAP[subject.toLowerCase()];
+  if (byKey) {
+    const normVariants = byKey.map(normalizeSubject);
+    return MINIGAMES_DB.filter(game => normVariants.includes(normalizeSubject(game.subject)));
+  }
+
+  // 3. Last resort: partial fuzzy match
+  return MINIGAMES_DB.filter(game =>
+    normalizeSubject(game.subject).includes(normInput) ||
+    normInput.includes(normalizeSubject(game.subject))
   );
-  
-  return matches;
 }
 
 export function getMiniGameById(id: string): MiniGameData | undefined {

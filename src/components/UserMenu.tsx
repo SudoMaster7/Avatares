@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { User, LogIn, Copy, LogOut } from "lucide-react";
+import { User, LogIn, Copy, LogOut, Shield } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useEffect, useState } from "react";
 import { getCurrentUser, signOutCommand, UserProfile } from "@/services/auth-service";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { AuthDialog } from "./AuthDialog";
 
 export function UserMenu() {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [showAuth, setShowAuth] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         const loadUser = async () => {
@@ -25,6 +27,14 @@ export function UserMenu() {
             setUser(u);
         };
         loadUser();
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setIsAdmin(session?.user?.user_metadata?.role === 'admin');
+        });
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+            setIsAdmin(session?.user?.user_metadata?.role === 'admin');
+        });
+        return () => subscription.unsubscribe();
     }, []);
 
     const copyId = () => {
@@ -82,6 +92,18 @@ export function UserMenu() {
                         <Copy className="mr-2 h-4 w-4" />
                         <span>Copiar ID</span>
                     </DropdownMenuItem>
+                    {isAdmin && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => window.location.href = '/admin'}
+                                className="text-indigo-600 font-medium"
+                            >
+                                <Shield className="mr-2 h-4 w-4" />
+                                <span>Painel Admin</span>
+                            </DropdownMenuItem>
+                        </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:bg-red-50">
                         <LogOut className="mr-2 h-4 w-4" />

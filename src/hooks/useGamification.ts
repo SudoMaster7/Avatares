@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { UserStats, ACHIEVEMENTS, calculateLevel, LEVELS } from '@/lib/gamification';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { getCurrentUserId } from '@/services/auth-service';
+import {
+    saveGameStatsToCloud,
+    loadGameStatsFromCloud,
+    saveGameStatsLocally,
+    loadGameStatsLocally,
+    mergeGameStats,
+} from '@/services/user-data';
 
 const DEFAULT_STATS: UserStats = {
     xp: 0,
@@ -16,68 +23,79 @@ const DEFAULT_STATS: UserStats = {
 
 export function useGamification() {
     const [stats, setStats] = useState<UserStats>(DEFAULT_STATS);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Load from localStorage or Supabase on mount
+    // Load from localStorage + Supabase on mount
     useEffect(() => {
         const loadStats = async () => {
-            // 1. Try local storage first (faster)
-            const saved = typeof window !== 'undefined' ? localStorage.getItem('avatar_user_stats') : null;
-            if (saved) {
-                setStats(JSON.parse(saved));
+            // 1. Load local stats first (fast)
+            const localStats = loadGameStatsLocally();
+            if (localStats) {
+                setStats(localStats);
             }
 
-            // 2. Try Supabase if user exists - DISABLED until database is set up
-            // const userId = getCurrentUserId();
-            // if (userId) {
-            //     const { data } = await supabase
-            //         .from('student_profiles')
-            //         .select('total_points')
-            //         .eq('user_id', userId)
-            //         .single();
+            // 2. Check if user is authenticated
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setIsAuthenticated(true);
 
-            //     if (data) {
-            //         // Start with server XP if local is missing or lower (simple sync conflict resolution)
-            //         // Ideally we'd merge, but for now server wins if local is empty
-            //         if (!saved) {
-            //             setStats(prev => calculateStatsFromXP(data.total_points));
-            //         }
-            //     }
-            // }
+                // 3. Load cloud stats and merge
+                const cloudStats = await loadGameStatsFromCloud();
+                const merged = mergeGameStats(localStats, cloudStats);
+
+                setStats(merged);
+                saveGameStatsLocally(merged);
+
+                // 4. If cloud was behind, save merged data back
+                if (cloudStats && merged.xp > cloudStats.xp) {
+                    await saveGameStatsToCloud(merged);
+                }
+            }
+
+            // 5. Update streak
+            if (localStats || session?.user) {
+                const currentStats = localStats || DEFAULT_STATS;
+                const today = new Date().toISOString().slice(0, 10);
+                const lastLogin = currentStats.lastLoginDate?.slice(0, 10);
+
+                if (lastLogin !== today) {
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+                    setStats(prev => ({
+                        ...prev,
+                        lastLoginDate: new Date().toISOString(),
+                        daysStreak: lastLogin === yesterdayStr ? prev.daysStreak + 1 : 1,
+                    }));
+                }
+            }
         };
         loadStats();
     }, []);
 
-    // Save to localStorage AND Supabase on change
+    // Save to localStorage + Supabase on change (debounced cloud save)
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('avatar_user_stats', JSON.stringify(stats));
+        // Always save locally immediately
+        saveGameStatsLocally(stats);
+
+        // Debounce cloud save (2 seconds)
+        if (isAuthenticated) {
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
+            }
+            saveTimerRef.current = setTimeout(() => {
+                saveGameStatsToCloud(stats);
+            }, 2000);
         }
 
-        // DISABLED until database is set up
-        // const userId = getCurrentUserId();
-        // if (userId) {
-        //     // Updates Supabase directly (debounce could be added for optimization)
-        //     supabase.from('student_profiles')
-        //         .upsert({
-        //             user_id: userId,
-        //             total_points: stats.xp,
-        //             // We would map other fields if schema supported them
-        //         }, { onConflict: 'user_id' })
-        //         .then(({ error }) => {
-        //             if (error) console.error('Error syncing XP:', error);
-        //         });
-        // }
-    }, [stats]);
-
-    // Helper to reconstruct stats from just XP (since schema is limited)
-    const calculateStatsFromXP = (xp: number): UserStats => {
-        const levelObj = calculateLevel(xp);
-        return {
-            ...DEFAULT_STATS,
-            xp,
-            level: levelObj.level,
+        return () => {
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
+            }
         };
-    };
+    }, [stats, isAuthenticated]);
 
     const addXP = (amount: number) => {
         setStats(prev => {

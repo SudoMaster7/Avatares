@@ -47,7 +47,7 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
             recognition.interimResults = true;
             recognition.lang = 'pt-BR';
 
-            recognition.onstart = () => {
+            (recognition as any).onstart = () => {
                 console.log('🎤 Recording started');
                 setIsRecording(true);
                 startTimeRef.current = Date.now();
@@ -56,7 +56,7 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 }, 100);
             };
 
-            recognition.onresult = (event) => {
+            (recognition as any).onresult = (event: any) => {
                 console.log('🎯 Speech result:', event.results.length, 'results');
                 
                 let allText = '';
@@ -88,12 +88,12 @@ export function useSimpleRecorder(): UseSimpleRecorderResult {
                 setCurrentTranscript(allText.trim());
             };
 
-            recognition.onerror = (event) => {
-                console.error('❌ Speech error:', event.error);
+            (recognition as any).onerror = (event: any) => {
+                console.error('\u274C Speech error:', event.error);
                 cleanup();
             };
 
-            recognition.onend = () => {
+            (recognition as any).onend = () => {
                 console.log('🛑 Recording ended');
                 cleanup();
             };

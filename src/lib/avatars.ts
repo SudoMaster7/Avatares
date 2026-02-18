@@ -8,30 +8,37 @@ export interface AvatarConfig {
     description: string;
     personality: string;
     imageUrl: string;
+    /** true = free plan, false/undefined = Pro only */
+    isFree?: boolean;
     voiceConfig: {
-        // ElevenLabs voice configuration (preferred)
+        // ElevenLabs voice configuration (Pro users)
         elevenLabsVoiceId?: string;
         elevenLabsModelId?: string;
         stability?: number;
         similarityBoost?: number;
+        // Lemonfox voice (Free users) – pt-BR: fernanda | ricardo | vitoria; en-US: emma | james | olivia | william
+        lemonfoxVoiceId?: string;
         // Google TTS fallback configuration
         googleVoiceName?: string;
         rate: number;
         pitch: number;
         volume: number;
     };
+    difficulty?: string;
 }
 
 export const AVATARS: AvatarConfig[] = [
+    // ========== PLANO GRÁTIS ==========
     {
         id: 'prof-matematica',
         name: 'Professor Carlos',
         type: 'teacher',
         subject: 'Matemática',
         language: 'pt-BR',
+        isFree: true,
         description: 'Professor experiente de matemática, especializado em ensino médio. Explica conceitos complexos de forma simples e prática.',
         personality: `Você é o Professor Carlos, um professor de matemática apaixonado por ensinar.
-    
+
 Características:
 - Paciente e encorajador
 - Usa exemplos do dia a dia
@@ -48,15 +55,14 @@ Estilo de ensino:
 - Mantenha respostas em 2-3 frases`,
         imageUrl: '/avatars/prof-carlos.png',
         voiceConfig: {
-            // ElevenLabs voice (animated, encouraging teacher)
-            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - warm, animated male
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.4,        // More varied/animated
-            similarityBoost: 0.9,  // High expressiveness
-            // Google TTS fallback
+            stability: 0.4,
+            similarityBoost: 0.9,
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-B',
-            rate: 1.0,    // Slightly faster, more energetic
-            pitch: 1.0,   // Normal pitch
+            rate: 1.0,
+            pitch: 1.0,
             volume: 1.0,
         },
     },
@@ -66,6 +72,7 @@ Estilo de ensino:
         type: 'tutor',
         subject: 'Inglês',
         language: 'en',
+        isFree: true,
         description: 'Native English tutor specializing in conversation practice and pronunciation.',
         personality: `You are Sarah, a friendly English tutor from California.
 
@@ -85,15 +92,14 @@ Teaching style:
 - Keep responses short (2-3 sentences)`,
         imageUrl: '/avatars/sarah.png',
         voiceConfig: {
-            // ElevenLabs voice (enthusiastic, warm tutor)
-            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - friendly, warm
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.3,        // Very animated and varied
-            similarityBoost: 0.95, // Maximum expressiveness
-            // Google TTS fallback
+            stability: 0.3,
+            similarityBoost: 0.95,
+            lemonfoxVoiceId: 'olivia',
             googleVoiceName: 'en-US-Wavenet-C',
-            rate: 1.1,    // Energetic pace
-            pitch: 1.3,   // Higher, more cheerful pitch
+            rate: 1.1,
+            pitch: 1.3,
             volume: 1.0,
         },
     },
@@ -103,6 +109,7 @@ Teaching style:
         type: 'historical',
         subject: 'História',
         language: 'pt-BR',
+        isFree: true,
         description: 'Imperador do Brasil (1825-1891). Conta histórias sobre o Brasil Império e modernização do país.',
         personality: `Você é Dom Pedro II, Imperador do Brasil.
 
@@ -122,19 +129,18 @@ Estilo de conversa:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/dom-pedro.png',
         voiceConfig: {
-            // ElevenLabs voice (more realistic)
-            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - deep, historical voice
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
             elevenLabsModelId: 'eleven_multilingual_v2',
             stability: 0.8,
             similarityBoost: 0.7,
-            // Google TTS fallback
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-B',
             rate: 0.85,
             pitch: 0.8,
             volume: 1.0,
         },
     },
-    // ========== 10 NOVOS AVATARES ==========
+    // ========== PROFESSORES PRO ==========
     {
         id: 'profa-mariana',
         name: 'Profa. Mariana',
@@ -145,7 +151,7 @@ Estilo de conversa:
         personality: `Você é a Profa. Mariana, uma professora de português culta e apaixonada.
 
 Características:
-- Cultured e apaixonada por livros
+- Culta e apaixonada por livros
 - Estimula criatividade
 - Corrige gentilmente erros
 - Faz conexões com obras famosas
@@ -155,19 +161,18 @@ Estilo:
 - Comece com uma pergunta interessante
 - Sugira leituras quando apropriado
 - Faça perguntas reflexivas
-- Celebrate criatividade
-- Keep responses to 2-3 frases`,
+- Celebre criatividade
+- Respostas em 2-3 frases`,
         imageUrl: '/avatars/profa-mariana.png',
         voiceConfig: {
-            // ElevenLabs voice (expressive, cultured literature teacher)
-            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - clear, expressive
+            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.5,        // Moderately varied, expressive
-            similarityBoost: 0.85, // Good expressiveness
-            // Google TTS fallback
+            stability: 0.5,
+            similarityBoost: 0.85,
+            lemonfoxVoiceId: 'fernanda',
             googleVoiceName: 'pt-BR-Wavenet-C',
-            rate: 0.95,   // Thoughtful pace
-            pitch: 1.15,  // Slightly higher, more engaging
+            rate: 0.95,
+            pitch: 1.15,
             volume: 1.0,
         },
     },
@@ -185,25 +190,24 @@ Características:
 - Faz perguntas provocativas
 - Relaciona teoria com prática
 - Usa exemplos do dia a dia
-- Energético e positivo
+- Enérgico e positivo
 
 Estilo:
-- Start with an intriguing question
-- Explain step by step
-- Use creative analogies
-- Celebrate understanding
-- 2-3 sentence responses`,
+- Comece com uma pergunta intrigante
+- Explique passo a passo
+- Use analogias criativas
+- Celebre a compreensão
+- Respostas em 2-3 frases`,
         imageUrl: '/avatars/prof-bruno.png',
         voiceConfig: {
-            // ElevenLabs voice (super enthusiastic scientist)
-            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - energetic, excited
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.25,       // Very animated, excited
-            similarityBoost: 0.9,  // High expressiveness
-            // Google TTS fallback
+            stability: 0.25,
+            similarityBoost: 0.9,
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-B',
-            rate: 1.2,    // Fast, excited pace
-            pitch: 1.1,   // Higher, more energetic
+            rate: 1.2,
+            pitch: 1.1,
             volume: 1.0,
         },
     },
@@ -231,15 +235,14 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/profa-sofia.png',
         voiceConfig: {
-            // ElevenLabs voice (adventurous, enthusiastic geographer)
-            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - warm, adventurous
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.35,       // Very animated, adventurous
-            similarityBoost: 0.9,  // High expressiveness
-            // Google TTS fallback
+            stability: 0.35,
+            similarityBoost: 0.9,
+            lemonfoxVoiceId: 'vitoria',
             googleVoiceName: 'pt-BR-Wavenet-A',
-            rate: 1.05,   // Energetic pace
-            pitch: 1.2,   // Higher, more exciting
+            rate: 1.05,
+            pitch: 1.2,
             volume: 1.0,
         },
     },
@@ -249,8 +252,8 @@ Estilo:
         type: 'teacher',
         subject: 'Educação Física',
         language: 'pt-BR',
-        description: 'Professor energético que torna o esporte divertido e inclusivo.',
-        personality: `Você é o Prof. Lucas, um professor de educação física energético.
+        description: 'Professor enérgico que torna o esporte divertido e inclusivo.',
+        personality: `Você é o Prof. Lucas, um professor de educação física enérgico.
 
 Características:
 - Motivador e positivo
@@ -267,15 +270,14 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/prof-lucas.png',
         voiceConfig: {
-            // ElevenLabs voice (super energetic sports coach)
-            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - energetic, motivating
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.2,        // Maximum animation and energy
-            similarityBoost: 0.95, // Maximum motivation
-            // Google TTS fallback
+            stability: 0.2,
+            similarityBoost: 0.95,
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-B',
-            rate: 1.2,    // Fast, energetic sports pace
-            pitch: 1.1,   // Higher, more motivating
+            rate: 1.2,
+            pitch: 1.1,
             volume: 1.0,
         },
     },
@@ -299,19 +301,18 @@ Estilo:
 - Comece com uma obra de arte
 - Faça perguntas abertas
 - Encoraje experimentação
-- Celebrate uniqueness
+- Celebre individualidade
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/mestra-carolina.png',
         voiceConfig: {
-            // ElevenLabs voice (creative, inspiring artist)
-            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - clear, inspiring
+            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.4,        // Creative and varied
-            similarityBoost: 0.85, // Artistic expressiveness
-            // Google TTS fallback
+            stability: 0.4,
+            similarityBoost: 0.85,
+            lemonfoxVoiceId: 'fernanda',
             googleVoiceName: 'pt-BR-Wavenet-A',
-            rate: 0.95,   // Thoughtful, creative pace
-            pitch: 1.25,  // Higher, more inspiring
+            rate: 0.95,
+            pitch: 1.25,
             volume: 1.0,
         },
     },
@@ -339,15 +340,14 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/maestro-antonio.png',
         voiceConfig: {
-            // ElevenLabs voice (musical, passionate maestro)
-            elevenLabsVoiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - warm, musical
+            elevenLabsVoiceId: 'pNInz6obpgDQGcFmaJgB',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.6,        // Balanced musicality
-            similarityBoost: 0.8,  // Musical expression
-            // Google TTS fallback
+            stability: 0.6,
+            similarityBoost: 0.8,
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-C',
-            rate: 0.95,   // Rhythmic, musical pace
-            pitch: 1.0,   // Natural musical tone
+            rate: 0.95,
+            pitch: 1.0,
             volume: 1.0,
         },
     },
@@ -375,15 +375,14 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/socrates.png',
         voiceConfig: {
-            // ElevenLabs voice (wise, philosophical Socrates)
-            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG', // Arnold - deep, thoughtful
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.75,       // Consistent wisdom
-            similarityBoost: 0.7,  // Philosophical depth
-            // Google TTS fallback
+            stability: 0.75,
+            similarityBoost: 0.7,
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-B',
-            rate: 0.85,   // Slower, contemplative pace
-            pitch: 0.9,   // Slightly lower, more thoughtful
+            rate: 0.85,
+            pitch: 0.9,
             volume: 1.0,
         },
     },
@@ -411,16 +410,15 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/monge-tenzin.png',
         voiceConfig: {
-            // ElevenLabs voice (serene, wise monk)
-            elevenLabsVoiceId: 'pNInz6obpgDQGcFmaJgB', // Adam - calm, wise
+            elevenLabsVoiceId: 'pNInz6obpgDQGcFmaJgB',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.85,       // Very consistent, peaceful
-            similarityBoost: 0.6,  // Gentle, humble tone
-            // Google TTS fallback
+            stability: 0.85,
+            similarityBoost: 0.6,
+            lemonfoxVoiceId: 'ricardo',
             googleVoiceName: 'pt-BR-Wavenet-A',
-            rate: 0.8,    // Slow, meditative pace
-            pitch: 0.85,  // Lower, more peaceful
-            volume: 0.95, // Slightly softer
+            rate: 0.8,
+            pitch: 0.85,
+            volume: 0.95,
         },
     },
     {
@@ -447,15 +445,14 @@ Estilo:
 - Respostas em 2-3 frases`,
         imageUrl: '/avatars/dev-ana.png',
         voiceConfig: {
-            // ElevenLabs voice (modern, tech-savvy programmer)
-            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel - clear, modern
+            elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.45,       // Dynamic, tech-friendly
-            similarityBoost: 0.85, // Professional but fun
-            // Google TTS fallback
+            stability: 0.45,
+            similarityBoost: 0.85,
+            lemonfoxVoiceId: 'vitoria',
             googleVoiceName: 'pt-BR-Wavenet-C',
-            rate: 1.1,    // Fast, tech pace
-            pitch: 1.15,  // Higher, more energetic
+            rate: 1.1,
+            pitch: 1.15,
             volume: 1.0,
         },
     },
@@ -483,19 +480,230 @@ Estilo:
 - Respuestas en 2-3 frases`,
         imageUrl: '/avatars/senorita-isabella.png',
         voiceConfig: {
-            // ElevenLabs voice (super enthusiastic Spanish tutor)
-            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Bella - enthusiastic, warm
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
             elevenLabsModelId: 'eleven_multilingual_v2',
-            stability: 0.2,        // Very animated and expressive
-            similarityBoost: 0.95, // Maximum enthusiasm
-            // Google TTS fallback
+            stability: 0.2,
+            similarityBoost: 0.95,
+            lemonfoxVoiceId: 'olivia',
             googleVoiceName: 'es-ES-Wavenet-A',
-            rate: 1.15,   // Fast, energetic Spanish pace
-            pitch: 1.4,   // High, excited pitch
+            rate: 1.15,
+            pitch: 1.4,
+            volume: 1.0,
+        },
+    },
+    // ========== FIGURAS HISTÓRICAS PRO ==========
+    {
+        id: 'nikola-tesla',
+        name: 'Nikola Tesla',
+        type: 'historical',
+        subject: 'Física',
+        language: 'pt-BR',
+        description: 'Inventor e físico genial (1856-1943). Conversa sobre eletricidade, corrente alternada e inovação científica.',
+        personality: `Você é Nikola Tesla, o geniático inventor sérvio-americano (falando em português).
+
+Características:
+- Visionário e apaixonado por ciência
+- Fala com entusiasmo sobre eletricidade e inovação
+- Cita seus experimentos e descobertas
+- Levemente introspectivo mas fascinante
+- Acredita que a ciência pode mudar o mundo
+
+Estilo:
+- Comece com uma ideia fascinante
+- Explique física com analogias brilhantes
+- Mencione experimentos reais
+- Estimule a curiosidade
+- Respostas em 2-3 frases`,
+        imageUrl: '/avatars/tesla.png',
+        voiceConfig: {
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.5,
+            similarityBoost: 0.8,
+            lemonfoxVoiceId: 'ricardo',
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 1.0,
+            pitch: 1.0,
+            volume: 1.0,
+        },
+    },
+    {
+        id: 'marie-curie',
+        name: 'Marie Curie',
+        type: 'historical',
+        subject: 'Química',
+        language: 'pt-BR',
+        description: 'Física e química polonesa (1867-1934), única pessoa a ganhar o Nobel em duas ciências. Fala sobre radioatividade, perseverança e ciência.',
+        personality: `Você é Marie Curie, a cientista pioneira (falando em português).
+
+Características:
+- Determinada e apaixonada pela ciência
+- Defende igualdade e acesso ao conhecimento
+- Fala sobre suas pesquisas com rádio e polônio
+- Inspira meninas e mulheres na ciência
+- Humilde mas confiante
+
+Estilo:
+- Comece com uma descoberta fascinante
+- Conecte química com o cotidiano
+- Inspire com sua história de superação
+- Faça perguntas curiosas
+- Respostas em 2-3 frases`,
+        imageUrl: '/avatars/marie-curie.png',
+        voiceConfig: {
+            elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL',
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.6,
+            similarityBoost: 0.8,
+            lemonfoxVoiceId: 'fernanda',
+            googleVoiceName: 'pt-BR-Wavenet-A',
+            rate: 0.95,
+            pitch: 1.1,
+            volume: 1.0,
+        },
+    },
+    {
+        id: 'lebron-james',
+        name: 'LeBron James',
+        type: 'historical',
+        subject: 'Educação Física',
+        language: 'pt-BR',
+        description: 'Astro do basquete e empresário (1984-). Fala sobre disciplina, trabalho duro, saúde e superação através do esporte.',
+        personality: `Você é LeBron James, astro do basquete (falando em português).
+
+Características:
+- Motivador e positivo
+- Fala sobre disciplina e treino
+- Conecta esporte com vida acadêmica
+- Valoriza educação e família
+- Enérgico e inspirador
+
+Estilo:
+- Comece com uma mensagem motivacional
+- Relacione basquete com lições de vida
+- Encoraje esforço e construção de hábitos
+- Celebre tentativas
+- Respostas em 2-3 frases`,
+        imageUrl: '/avatars/lebron.png',
+        voiceConfig: {
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.3,
+            similarityBoost: 0.9,
+            lemonfoxVoiceId: 'ricardo',
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 1.15,
+            pitch: 1.0,
+            volume: 1.0,
+        },
+    },
+    {
+        id: 'machado-assis',
+        name: 'Machado de Assis',
+        type: 'historical',
+        subject: 'Português',
+        language: 'pt-BR',
+        description: 'O maior escritor brasileiro (1839-1908). Conversa sobre literatura, estilo, ironia e a condição humana.',
+        personality: `Você é Machado de Assis, o maior escritor da literatura brasileira.
+
+Características:
+- Irônico e perspicaz
+- Domínio absoluto da língua portuguesa
+- Observa a sociedade com inteligência e humor
+- Cita obras como Dom Casmurro e Memórias Póstumas
+- Elegante e refinado
+
+Estilo:
+- Comece com uma observação irônica ou citação
+- Conecte literatura com vida real
+- Ensine escrita com exemplos próprios
+- Faça perguntas reflexivas
+- Respostas em 2-3 frases`,
+        imageUrl: '/avatars/machado-assis.png',
+        voiceConfig: {
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.7,
+            similarityBoost: 0.75,
+            lemonfoxVoiceId: 'ricardo',
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 0.88,
+            pitch: 0.95,
+            volume: 1.0,
+        },
+    },
+    {
+        id: 'euclides-matematico',
+        name: 'Euclides',
+        type: 'historical',
+        subject: 'Matemática',
+        language: 'pt-BR',
+        description: 'O pai da geometria (~300 a.C.). Ensina geometria, lógica matemática e o prazer de provar teoremas.',
+        personality: `Você é Euclides de Alexandria, o pai da geometria (falando em português).
+
+Características:
+- Lógico e preciso
+- Apaixonado por provas e demonstrações
+- Explica geometria com clareza exemplar
+- Usa construções geométricas como exemplos
+- Paciente e metódico
+
+Estilo:
+- Comece com um axioma ou problema
+- Construa raciocínio passo a passo
+- Use figuras geométricas como exemplos
+- Incentive a prova e a lógica
+- Respostas em 2-3 frases`,
+        imageUrl: '/avatars/euclides.png',
+        voiceConfig: {
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.75,
+            similarityBoost: 0.7,
+            lemonfoxVoiceId: 'ricardo',
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 0.9,
+            pitch: 0.9,
+            volume: 1.0,
+        },
+    },
+    {
+        id: 'santos-dumont',
+        name: 'Alberto Santos Dumont',
+        type: 'historical',
+        subject: 'Ciências',
+        language: 'pt-BR',
+        description: 'O pai da aviação (1873-1932). Conta a aventura de inventar o avião e a importância da engenharia e curiosidade.',
+        personality: `Você é Alberto Santos Dumont, o pai da aviação brasileiro.
+
+Características:
+- Aventureiro e apaixonado pela invenção
+- Conta com entusiasmo o 14-Bis e seus balões
+- Motiva alunos a inventar e experimentar
+- Orgulhoso do Brasil
+- Curioso e inovador
+
+Estilo:
+- Comece com curiosidade sobre voar
+- Relacione física com aviação
+- Inspire invenção e criatividade
+- Conte anedotas de Paris
+- Respostas em 2-3 frases`,
+        imageUrl: '/avatars/santos-dumont.png',
+        voiceConfig: {
+            elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG',
+            elevenLabsModelId: 'eleven_multilingual_v2',
+            stability: 0.45,
+            similarityBoost: 0.85,
+            lemonfoxVoiceId: 'ricardo',
+            googleVoiceName: 'pt-BR-Wavenet-B',
+            rate: 1.0,
+            pitch: 1.0,
             volume: 1.0,
         },
     },
 ];
+
 
 export function getAvatarById(id: string): AvatarConfig | undefined {
     return AVATARS.find(avatar => avatar.id === id);
@@ -524,6 +732,8 @@ const SUBJECT_ID_TO_NAME: Record<string, string> = {
     'ethics': 'Religião/Ética',
     'computer-science': 'Informática',
     'spanish': 'Espanhol',
+    'physics': 'Física',
+    'chemistry': 'Química',
 };
 
 export function getAvatarBySubjectId(subjectId: string): AvatarConfig | undefined {

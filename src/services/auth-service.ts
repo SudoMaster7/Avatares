@@ -178,6 +178,46 @@ export async function signOutCommand() {
     window.location.reload();
 }
 
+// ─────────────────────────────────────────────────────────
+// OAuth Providers (Google, GitHub)
+// ─────────────────────────────────────────────────────────
+
+export async function signInWithOAuth(provider: 'google') {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+            queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+            },
+        },
+    });
+
+    if (error) throw error;
+    return data;
+}
+
+// Handle OAuth callback (call this from /auth/callback page)
+export async function handleOAuthCallback() {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) throw error;
+    
+    if (session?.user) {
+        // Migrate guest data if needed
+        const guestId = typeof window !== 'undefined' ? localStorage.getItem(GUEST_KEY) : null;
+        if (guestId) {
+            await migrateGuestData(guestId, session.user.id);
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(GUEST_KEY);
+            }
+        }
+    }
+    
+    return session;
+}
+
 async function migrateGuestData(guestId: string, newUserId: string) {
     console.log(`Migrating data from ${guestId} to ${newUserId}`);
 
