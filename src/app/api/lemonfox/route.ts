@@ -13,26 +13,39 @@ import { NextRequest, NextResponse } from 'next/server';
 const LEMONFOX_API_KEY = process.env.LEMONFOX_API_KEY;
 const LEMONFOX_API_URL = 'https://api.lemonfox.ai/v1/audio/speech';
 
-// Voice presets por avatar
+// Voice presets — real Lemonfox voice names (use language param for PT-BR)
 export const LEMONFOX_VOICES = {
-    // Portuguese voices
-    'fernanda': { id: 'fernanda', language: 'pt-BR', description: 'Feminina, natural, professora' },
-    'ricardo': { id: 'ricardo', language: 'pt-BR', description: 'Masculino, calmo, educador' },
-    'vitoria': { id: 'vitoria', language: 'pt-BR', description: 'Feminina, animada, jovem' },
-    // English voices
-    'emma': { id: 'emma', language: 'en-US', description: 'Female, warm, teacher' },
-    'james': { id: 'james', language: 'en-US', description: 'Male, authoritative, professor' },
-    'olivia': { id: 'olivia', language: 'en-US', description: 'Female, friendly, guide' },
-    'william': { id: 'william', language: 'en-US', description: 'Male, energetic, coach' },
+    // Female voices (PT-BR or EN depending on language param)
+    'bella':   { id: 'bella',   description: 'Feminina, natural, professora' },
+    'nova':    { id: 'nova',    description: 'Feminina, animada, jovem' },
+    'sarah':   { id: 'sarah',   description: 'Female, warm, teacher' },
+    'jessica': { id: 'jessica', description: 'Female, friendly, guide' },
+    // Male voices
+    'michael': { id: 'michael', description: 'Masculino, calmo, educador' },
+    'liam':    { id: 'liam',    description: 'Masculino, enérgico, dinâmico' },
+    'eric':    { id: 'eric',    description: 'Male, authoritative, professor' },
+    'echo':    { id: 'echo',    description: 'Male, steady, narrator' },
 } as const;
 
 export type LemonfoxVoiceId = keyof typeof LEMONFOX_VOICES;
 
+// Map from avatar language codes to Lemonfox language codes
+const LANG_MAP: Record<string, string> = {
+    'pt-BR': 'pt-br',
+    'pt-br': 'pt-br',
+    'en':    'en-us',
+    'en-US': 'en-us',
+    'en-us': 'en-us',
+    'es':    'es-es',
+    'es-ES': 'es-es',
+};
+
 interface LemonfoxRequest {
     text: string;
     voiceId?: LemonfoxVoiceId;
-    speed?: number;  // 0.5 - 2.0
-    pitch?: number;  // 0.5 - 2.0
+    language?: string;  // avatar language code, e.g. 'pt-BR', 'en'
+    speed?: number;     // 0.5 - 2.0
+    pitch?: number;     // 0.5 - 2.0
 }
 
 export async function POST(request: NextRequest) {
@@ -48,10 +61,14 @@ export async function POST(request: NextRequest) {
         const body: LemonfoxRequest = await request.json();
         const { 
             text, 
-            voiceId = 'fernanda',
+            voiceId = 'bella',
+            language,
             speed = 1.0,
             pitch = 1.0,
         } = body;
+
+        // Resolve Lemonfox language code (required for PT-BR voices)
+        const lemonfoxLang = (language && LANG_MAP[language]) ?? 'pt-br';
 
         if (!text || text.trim().length === 0) {
             return NextResponse.json(
@@ -73,6 +90,7 @@ export async function POST(request: NextRequest) {
                 model: 'tts-1',
                 input: truncatedText,
                 voice: voiceId,
+                language: lemonfoxLang,
                 speed: speed,
                 response_format: 'mp3',
             }),

@@ -255,7 +255,7 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
             } else if (ttsType === 'lemonfox') {
                 // Free users get Lemonfox (good quality, per-avatar voice)
                 const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId
-                    ?? (avatar.language === 'en' ? 'emma' : 'ricardo');
+                    ?? (avatar.language === 'en' ? 'sarah' : 'michael');
                 await speakWithLemonfox({
                     text: apiResponse.content,
                     language: avatar.language,

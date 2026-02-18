@@ -73,6 +73,7 @@ export async function speakWithLemonfox(options: TTSOptions): Promise<void> {
             body: JSON.stringify({
                 text,
                 voiceId: lemonfoxVoiceId,
+                language: options.language,
                 speed,
                 pitch,
             }),
