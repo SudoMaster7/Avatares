@@ -24,7 +24,7 @@ import { initializeGuestSession } from '@/services/auth-service';
 import { getOrCreateConversation, saveMessage, loadConversationHistory } from '@/services/history';
 
 // ── Free voice limit — first N responses use ElevenLabs, then Web Speech ──────────────
-// Google Neural2 is used for free users — no usage limit
+const FREE_VOICE_LIMIT = 10;
 
 function getVoicesUsed(uid: string | null): number {
     if (typeof window === 'undefined') return 0;
@@ -59,8 +59,7 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
     const [showVisualContext, setShowVisualContext] = useState(true);
     const [userId, setUserId] = useState<string | null | undefined>(undefined); // undefined = loading
     const [showAuthDialog, setShowAuthDialog] = useState(false);
-    // voicesUsed kept only for legacy localStorage compatibility
-    const [voicesUsed] = useState(0);
+    const [voicesUsed, setVoicesUsed] = useState(0);
 
     const { trackMessageSent, trackScenarioCompleted } = useGamification();
     const planState = usePlan(userId ?? null);
@@ -70,7 +69,7 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
 
     // Load voice counter from localStorage when user is known
     useEffect(() => {
-        if (userId !== undefined) getVoicesUsed(userId ?? null); // keep localStorage compat
+        if (userId !== undefined) setVoicesUsed(getVoicesUsed(userId ?? null));
     }, [userId]);
 
     // Get user ID on mount - wait for session, then subscribe to changes
@@ -275,21 +274,51 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                     similarityBoost: avatar.voiceConfig.similarityBoost,
                 });
             } else if (ttsType === 'lemonfox' || ttsType === 'google') {
-                // Free users: Google Neural2 (1M chars/month free, high quality)
-                try {
-                    await speakWithGoogleTTS({
-                        text: apiResponse.content,
-                        language: avatar.language ?? 'pt-BR',
-                        preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : true,
-                        speakingRate: avatar.voiceConfig.rate ?? 0.95,
-                    });
-                } catch {
-                    // Fallback to browser Web Speech if Google fails
-                    await speakWithWebSpeech({
-                        text: apiResponse.content,
-                        language: avatar.language ?? 'pt-BR',
-                        preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
-                    });
+                const currentlyUsed = getVoicesUsed(userId ?? null);
+                if (currentlyUsed < FREE_VOICE_LIMIT && avatar.voiceConfig.elevenLabsVoiceId) {
+                    // First 10 falas: ElevenLabs (melhor qualidade)
+                    try {
+                        await speakWithElevenLabs({
+                            text: apiResponse.content,
+                            language: avatar.language,
+                            elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
+                            elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
+                            stability: avatar.voiceConfig.stability,
+                            similarityBoost: avatar.voiceConfig.similarityBoost,
+                        });
+                        const newCount = incrementVoicesUsed(userId ?? null);
+                        setVoicesUsed(newCount);
+                        const remaining = FREE_VOICE_LIMIT - newCount;
+                        if (remaining === 0) {
+                            info('🎤 Seus 10 créditos de voz premium acabaram! Continuando com Google Neural2.', 5000);
+                        } else if (remaining <= 3) {
+                            info(`⚠️ Apenas ${remaining} crédito${remaining === 1 ? '' : 's'} de voz premium restante${remaining === 1 ? '' : 's'}.`, 4000);
+                        }
+                    } catch {
+                        // ElevenLabs falhou: usar Google Neural2
+                        await speakWithGoogleTTS({
+                            text: apiResponse.content,
+                            language: avatar.language ?? 'pt-BR',
+                            preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : true,
+                            speakingRate: avatar.voiceConfig.rate ?? 0.95,
+                        }).catch(() => speakWithWebSpeech({ text: apiResponse.content, language: avatar.language ?? 'pt-BR' }));
+                    }
+                } else {
+                    // Limite atingido: Google Neural2 ilimitado
+                    try {
+                        await speakWithGoogleTTS({
+                            text: apiResponse.content,
+                            language: avatar.language ?? 'pt-BR',
+                            preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : true,
+                            speakingRate: avatar.voiceConfig.rate ?? 0.95,
+                        });
+                    } catch {
+                        await speakWithWebSpeech({
+                            text: apiResponse.content,
+                            language: avatar.language ?? 'pt-BR',
+                            preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
+                        });
+                    }
                 }
             }
             // Guest users (ttsType === null) get no TTS
@@ -422,13 +451,26 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                     <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 flex-wrap">
                         <QualityBanner currentQuality={planState.modelQuality} />
                         <div className="flex items-center gap-3 flex-wrap">
-                            {/* Google Neural2 badge for free users */}
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded-full">
-                                🎤 Voz Neural2
-                            </span>
-                            <span className="text-xs text-amber-700 dark:text-amber-300">
-                                {planState.tokensRemaining} tokens restantes
-                            </span>
+                            {/* Voice credit counter */}
+                            {(() => {
+                                const remaining = FREE_VOICE_LIMIT - voicesUsed;
+                                if (remaining <= 0) return (
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 px-2 py-0.5 rounded-full">
+                                        🎤 Neural2 ativo
+                                    </span>
+                                );
+                                const pct = remaining / FREE_VOICE_LIMIT;
+                                const color = pct <= 0.3
+                                    ? 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700'
+                                    : pct <= 0.5
+                                    ? 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700'
+                                    : 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700';
+                                return (
+                                    <span className={`inline-flex items-center gap-1 text-xs font-semibold border px-2 py-0.5 rounded-full ${color}`}>
+                                        🎤 <strong>{remaining}</strong>/{FREE_VOICE_LIMIT} vozes premium
+                                    </span>
+                                );
+                            })()}
                             <Button
                                 size="sm"
                                 className="bg-amber-400 hover:bg-amber-500 text-black text-xs font-bold px-3 py-1 h-auto"
