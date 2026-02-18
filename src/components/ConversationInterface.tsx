@@ -253,15 +253,24 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                     similarityBoost: avatar.voiceConfig.similarityBoost,
                 });
             } else if (ttsType === 'lemonfox') {
-                // Free users get Lemonfox (good quality, per-avatar voice)
+                // Free users get Lemonfox; fallback to Web Speech API if it fails
                 const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId
                     ?? (avatar.language === 'en' ? 'sarah' : 'michael');
-                await speakWithLemonfox({
-                    text: apiResponse.content,
-                    language: avatar.language,
-                    lemonfoxVoiceId: lemonfoxVoice,
-                    speed: avatar.voiceConfig.rate,
-                });
+                try {
+                    await speakWithLemonfox({
+                        text: apiResponse.content,
+                        language: avatar.language,
+                        lemonfoxVoiceId: lemonfoxVoice,
+                        speed: avatar.voiceConfig.rate,
+                    });
+                } catch {
+                    // Fallback: Web Speech API — suporta pt-BR nativamente no Chrome
+                    console.warn('[TTS] Lemonfox falhou, usando Web Speech API');
+                    await speakWithWebSpeech({
+                        text: apiResponse.content,
+                        language: avatar.language ?? 'pt-BR',
+                    });
+                }
             } else if (ttsType === 'google') {
                 // Fallback to Web Speech API
                 await speakWithWebSpeech({

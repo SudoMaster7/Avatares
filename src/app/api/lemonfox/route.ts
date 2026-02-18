@@ -16,15 +16,15 @@ const LEMONFOX_API_URL = 'https://api.lemonfox.ai/v1/audio/speech';
 // Voice presets — real Lemonfox voice names (use language param for PT-BR)
 export const LEMONFOX_VOICES = {
     // Female voices (PT-BR or EN depending on language param)
-    'bella':   { id: 'bella',   description: 'Feminina, natural, professora' },
-    'nova':    { id: 'nova',    description: 'Feminina, animada, jovem' },
-    'sarah':   { id: 'sarah',   description: 'Female, warm, teacher' },
-    'jessica': { id: 'jessica', description: 'Female, friendly, guide' },
+    'bella':   { id: 'clara',   description: 'Feminina, natural, professora' },
+    'nova':    { id: 'clara',    description: 'Feminina, animada, jovem' },
+    'sarah':   { id: 'clara',   description: 'Female, warm, teacher' },
+    'jessica': { id: 'clara', description: 'Female, friendly, guide' },
     // Male voices
-    'michael': { id: 'michael', description: 'Masculino, calmo, educador' },
-    'liam':    { id: 'liam',    description: 'Masculino, enérgico, dinâmico' },
-    'eric':    { id: 'eric',    description: 'Male, authoritative, professor' },
-    'echo':    { id: 'echo',    description: 'Male, steady, narrator' },
+    'michael': { id: 'papai', description: 'Masculino, calmo, educador' },
+    'liam':    { id: 'tiago',    description: 'Masculino, enérgico, dinâmico' },
+    'eric':    { id: 'tiago',    description: 'Male, authoritative, professor' },
+    'echo':    { id: 'tiago',    description: 'Male, steady, narrator' },
 } as const;
 
 export type LemonfoxVoiceId = keyof typeof LEMONFOX_VOICES;
@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
         // Resolve Lemonfox language code (required for PT-BR voices)
         const lemonfoxLang = (language && LANG_MAP[language]) ?? 'pt-br';
 
+        console.log(`[Lemonfox] voice=${voiceId} lang_in=${language} lang_out=${lemonfoxLang}`);
+
         if (!text || text.trim().length === 0) {
             return NextResponse.json(
                 { error: 'Text is required' },
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Lemonfox API error:', errorText);
+            console.error(`[Lemonfox] API error ${response.status}:`, errorText);
             return NextResponse.json(
                 { error: 'Failed to generate speech' },
                 { status: response.status }
@@ -108,6 +110,7 @@ export async function POST(request: NextRequest) {
         // Get audio as ArrayBuffer
         const audioBuffer = await response.arrayBuffer();
         const base64Audio = Buffer.from(audioBuffer).toString('base64');
+        console.log(`[Lemonfox] OK - audio size: ${audioBuffer.byteLength} bytes`);
 
         return NextResponse.json({
             audio: base64Audio,
