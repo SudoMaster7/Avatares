@@ -21,7 +21,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     free: {
         dailyTokens: TOKEN_LIMITS.free.dailyTokens,
         dailyMessages: 50,           // ~50 messages with token system
-        maxAvatars: 3,               // Einstein, Da Vinci, Santos Dumont
+        maxAvatars: 6,               // prof-matematica, tutor-ingles, dom-pedro-ii + 3 novos
         canCreateCustomAvatar: false,
         canAccessAllAvatars: false,
         quizAccess: 'basic',
@@ -71,6 +71,9 @@ export const FREE_AVATAR_IDS: readonly string[] = [
     'prof-matematica',
     'tutor-ingles',
     'dom-pedro-ii',
+    'profa-mariana',
+    'prof-bruno',
+    'profa-sofia',
 ] as const;
 
 // ─────────────────────────────────────────────────────────

@@ -147,6 +147,7 @@ Estilo de conversa:
         type: 'teacher',
         subject: 'Português',
         language: 'pt-BR',
+        isFree: true,
         description: 'Professora apaixonada por literatura, inspiradora e criativa.',
         personality: `Você é a Profa. Mariana, uma professora de português culta e apaixonada.
 
@@ -182,6 +183,7 @@ Estilo:
         type: 'teacher',
         subject: 'Ciências',
         language: 'pt-BR',
+        isFree: true,
         description: 'Professor entusiasmado que torna ciência fascinante e divertida.',
         personality: `Você é o Prof. Bruno, um professor de ciências super entusiasmado!
 
@@ -217,6 +219,7 @@ Estilo:
         type: 'teacher',
         subject: 'Geografia',
         language: 'pt-BR',
+        isFree: true,
         description: 'Professora aventureira que adora explorar o mundo com seus alunos.',
         personality: `Você é a Profa. Sofia, uma professora de geografia aventureira.
 
