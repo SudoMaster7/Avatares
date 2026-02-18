@@ -2,7 +2,7 @@
 export interface TTSOptions {
     text: string;
     language?: string;
-    preferFemale?: boolean;  // hint for Web Speech voice selection
+    preferFemale?: boolean;  // hint for Web Speech / Google voice selection
     // ElevenLabs options
     elevenLabsVoiceId?: string;
     elevenLabsModelId?: string;
@@ -12,9 +12,12 @@ export interface TTSOptions {
     lemonfoxVoiceId?: string;
     speed?: number;
     pitch?: number;
+    // Google Neural2 options
+    googleVoiceName?: string;  // override e.g. 'pt-BR-Neural2-A'
+    speakingRate?: number;     // 0.25–4.0
 }
 
-export type TTSProvider = 'elevenlabs' | 'lemonfox' | 'google' | 'web';
+export type TTSProvider = 'elevenlabs' | 'lemonfox' | 'google' | 'google-neural2' | 'web';
 
 /**
  * Main TTS function - uses ElevenLabs, Lemonfox, or Web Speech based on config
@@ -52,6 +55,54 @@ export async function speak(options: TTSOptions): Promise<void> {
     // Fallback to Web Speech API
     console.log('Using Web Speech API');
     await speakWithWebSpeech(options);
+}
+
+/**
+ * Speak text using Google Cloud TTS Neural2 — high quality, 1M chars/month free
+ * Voices: pt-BR-Neural2-C (F), pt-BR-Neural2-B (M), en-US-Neural2-C (F), en-US-Neural2-D (M)
+ */
+export async function speakWithGoogleTTS(options: TTSOptions): Promise<void> {
+    const {
+        text,
+        language = 'pt-BR',
+        preferFemale,
+        googleVoiceName,
+        speakingRate = 0.95,
+        pitch = 0,
+    } = options;
+
+    try {
+        const response = await fetch('/api/google-tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text,
+                language,
+                voiceName: googleVoiceName,
+                preferMale: preferFemale === false,
+                speakingRate,
+                pitch,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Google TTS API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const audioBlob = base64ToBlob(data.audio, 'audio/mpeg');
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        return new Promise((resolve, reject) => {
+            audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+            audio.onerror = reject;
+            audio.play();
+        });
+    } catch (error) {
+        console.error('Google TTS error:', error);
+        throw error;
+    }
 }
 
 /**

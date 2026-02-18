@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { AvatarConfig } from '@/lib/avatars';
 import { Scenario } from '@/lib/scenarios';
 import { generateResponse, createAvatarSystemPrompt, ChatApiResponse } from '@/services/groq';
-import { speak, initializeTTS, speakWithWebSpeech, speakWithLemonfox, speakWithElevenLabs } from '@/services/tts';
+import { speak, initializeTTS, speakWithWebSpeech, speakWithGoogleTTS, speakWithElevenLabs } from '@/services/tts';
 import { useGamification } from '@/hooks/useGamification';
 import { usePlan } from '@/hooks/usePlan';
 import { useToast } from '@/components/Toast';
@@ -24,7 +24,7 @@ import { initializeGuestSession } from '@/services/auth-service';
 import { getOrCreateConversation, saveMessage, loadConversationHistory } from '@/services/history';
 
 // ── Free voice limit — first N responses use ElevenLabs, then Web Speech ──────────────
-const FREE_VOICE_LIMIT = 10;
+// Google Neural2 is used for free users — no usage limit
 
 function getVoicesUsed(uid: string | null): number {
     if (typeof window === 'undefined') return 0;
@@ -59,7 +59,8 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
     const [showVisualContext, setShowVisualContext] = useState(true);
     const [userId, setUserId] = useState<string | null | undefined>(undefined); // undefined = loading
     const [showAuthDialog, setShowAuthDialog] = useState(false);
-    const [voicesUsed, setVoicesUsed] = useState(0);
+    // voicesUsed kept only for legacy localStorage compatibility
+    const [voicesUsed] = useState(0);
 
     const { trackMessageSent, trackScenarioCompleted } = useGamification();
     const planState = usePlan(userId ?? null);
@@ -69,7 +70,7 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
 
     // Load voice counter from localStorage when user is known
     useEffect(() => {
-        if (userId !== undefined) setVoicesUsed(getVoicesUsed(userId ?? null));
+        if (userId !== undefined) getVoicesUsed(userId ?? null); // keep localStorage compat
     }, [userId]);
 
     // Get user ID on mount - wait for session, then subscribe to changes
@@ -273,62 +274,23 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                     stability: avatar.voiceConfig.stability,
                     similarityBoost: avatar.voiceConfig.similarityBoost,
                 });
-            } else if (ttsType === 'lemonfox') {
-                const isEnglish = avatar.language === 'en' || avatar.language === 'en-US';
-                if (isEnglish) {
-                    // English avatars: Lemonfox native EN voice
-                    const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId ?? 'sarah';
-                    try {
-                        await speakWithLemonfox({
-                            text: apiResponse.content,
-                            language: avatar.language,
-                            lemonfoxVoiceId: lemonfoxVoice,
-                            speed: avatar.voiceConfig.rate,
-                        });
-                    } catch {
-                        await speakWithWebSpeech({ text: apiResponse.content, language: 'en-US' });
-                    }
-                } else {
-                    // PT-BR: first 10 responses use ElevenLabs, then Web Speech
-                    const currentlyUsed = getVoicesUsed(userId ?? null);
-                    if (currentlyUsed < FREE_VOICE_LIMIT && avatar.voiceConfig.elevenLabsVoiceId) {
-                        try {
-                            await speakWithElevenLabs({
-                                text: apiResponse.content,
-                                language: avatar.language,
-                                elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
-                                elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
-                                stability: avatar.voiceConfig.stability,
-                                similarityBoost: avatar.voiceConfig.similarityBoost,
-                            });
-                            const newCount = incrementVoicesUsed(userId ?? null);
-                            setVoicesUsed(newCount);
-                            const remaining = FREE_VOICE_LIMIT - newCount;
-                            if (remaining === 0) {
-                                warning(
-                                    '🎤 Suas 10 falas premium acabaram! Faça upgrade para Pro e tenha voz natural ilimitada.',
-                                    6000
-                                );
-                            } else if (remaining <= 3) {
-                                info(`⚠️ Apenas ${remaining} fala${remaining === 1 ? '' : 's'} premium restante${remaining === 1 ? '' : 's'}. Considere o Pro!`, 4000);
-                            }
-                        } catch {
-                            await speakWithWebSpeech({ text: apiResponse.content, language: avatar.language ?? 'pt-BR' });
-                        }
-                    } else {
-                        // Limit reached: Web Speech (free, PT-BR native in Chrome)
-                        await speakWithWebSpeech({
-                            text: apiResponse.content,
-                            language: avatar.language ?? 'pt-BR',
-                            preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
-                        });
-                    }
+            } else if (ttsType === 'lemonfox' || ttsType === 'google') {
+                // Free users: Google Neural2 (1M chars/month free, high quality)
+                try {
+                    await speakWithGoogleTTS({
+                        text: apiResponse.content,
+                        language: avatar.language ?? 'pt-BR',
+                        preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : true,
+                        speakingRate: avatar.voiceConfig.rate ?? 0.95,
+                    });
+                } catch {
+                    // Fallback to browser Web Speech if Google fails
+                    await speakWithWebSpeech({
+                        text: apiResponse.content,
+                        language: avatar.language ?? 'pt-BR',
+                        preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
+                    });
                 }
-            } else if (ttsType === 'google') {
-                await speakWithWebSpeech({
-                    text: apiResponse.content,
-                    language: avatar.language,
-                });
             }
             // Guest users (ttsType === null) get no TTS
             
@@ -459,7 +421,11 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200/50 dark:border-amber-700/50 px-4 py-2">
                     <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 flex-wrap">
                         <QualityBanner currentQuality={planState.modelQuality} />
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            {/* Google Neural2 badge for free users */}
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded-full">
+                                🎤 Voz Neural2
+                            </span>
                             <span className="text-xs text-amber-700 dark:text-amber-300">
                                 {planState.tokensRemaining} tokens restantes
                             </span>
@@ -585,37 +551,20 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                                 </Button>
                             </div>
                             
-                            {/* Free voice counter badge */}
-                            {planState.plan === 'free' && avatar.language !== 'en' && (() => {
-                                const remaining = FREE_VOICE_LIMIT - voicesUsed;
-                                if (remaining <= 0) return (
-                                    <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg flex items-center justify-between gap-2">
-                                        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                                            🎤 Voz premium esgotada — usando voz gratuita do browser.
-                                        </p>
-                                        <button
-                                            onClick={() => window.location.href = '/planos'}
-                                            className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-2 py-1 rounded-lg hover:opacity-90 shrink-0"
-                                        >
-                                            <Crown className="w-3 h-3 inline mr-1" />Pro
-                                        </button>
-                                    </div>
-                                );
-                                if (remaining <= 5) return (
-                                    <div className="mt-2 p-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-2">
-                                        <p className="text-xs text-blue-600 dark:text-blue-300">
-                                            🎤 <strong>{remaining}</strong> fala{remaining === 1 ? '' : 's'} premium restante{remaining === 1 ? '' : 's'}
-                                        </p>
-                                        <button
-                                            onClick={() => window.location.href = '/planos'}
-                                            className="text-xs text-blue-600 dark:text-blue-400 underline font-semibold shrink-0"
-                                        >
-                                            Upgrade Pro
-                                        </button>
-                                    </div>
-                                );
-                                return null;
-                            })()}
+                            {/* Google Neural2 info badge for free users */}
+                            {planState.plan === 'free' && (
+                                <div className="mt-2 p-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center justify-between gap-2">
+                                    <p className="text-xs text-green-700 dark:text-green-300">
+                                        🎤 Voz Neural2 ativa — qualidade premium no plano gratuíto
+                                    </p>
+                                    <button
+                                        onClick={() => window.location.href = '/planos'}
+                                        className="text-xs text-green-700 dark:text-green-400 underline font-semibold shrink-0"
+                                    >
+                                        Pro
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Token exhausted warning */}
                             {!planState.canSendMessage && !planState.isPro && (
