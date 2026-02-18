@@ -115,7 +115,7 @@ export function ImprovedAudioRecorder({
     }
 
     // Show recording state
-    if (showRecording && isRecording) {
+    if (showRecording) {
         return (
             <div className={cn("flex flex-col gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3", className)}>
                 {/* Recording header */}

@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import { AvatarConfig } from '@/lib/avatars';
 import { Scenario } from '@/lib/scenarios';
 import { generateResponse, createAvatarSystemPrompt, ChatApiResponse } from '@/services/groq';
-import { speak, initializeTTS, speakWithWebSpeech, speakWithLemonfox } from '@/services/tts';
+import { speak, initializeTTS, speakWithWebSpeech, speakWithLemonfox, speakWithElevenLabs } from '@/services/tts';
 import { useGamification } from '@/hooks/useGamification';
 import { usePlan } from '@/hooks/usePlan';
+import { useToast } from '@/components/Toast';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,6 +22,19 @@ import { AuthDialog } from '@/components/AuthDialog';
 
 import { initializeGuestSession } from '@/services/auth-service';
 import { getOrCreateConversation, saveMessage, loadConversationHistory } from '@/services/history';
+
+// ── Free voice limit — first N responses use ElevenLabs, then Web Speech ──────────────
+const FREE_VOICE_LIMIT = 10;
+
+function getVoicesUsed(uid: string | null): number {
+    if (typeof window === 'undefined') return 0;
+    return parseInt(localStorage.getItem(`sudo_fv_${uid ?? 'guest'}`) ?? '0', 10);
+}
+function incrementVoicesUsed(uid: string | null): number {
+    const next = getVoicesUsed(uid) + 1;
+    localStorage.setItem(`sudo_fv_${uid ?? 'guest'}`, String(next));
+    return next;
+}
 
 interface Message {
     id: string;
@@ -45,11 +59,18 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
     const [showVisualContext, setShowVisualContext] = useState(true);
     const [userId, setUserId] = useState<string | null | undefined>(undefined); // undefined = loading
     const [showAuthDialog, setShowAuthDialog] = useState(false);
+    const [voicesUsed, setVoicesUsed] = useState(0);
 
     const { trackMessageSent, trackScenarioCompleted } = useGamification();
     const planState = usePlan(userId ?? null);
+    const { warning, info } = useToast();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const hasInitialized = useRef(false);
+
+    // Load voice counter from localStorage when user is known
+    useEffect(() => {
+        if (userId !== undefined) setVoicesUsed(getVoicesUsed(userId ?? null));
+    }, [userId]);
 
     // Get user ID on mount - wait for session, then subscribe to changes
     useEffect(() => {
@@ -255,7 +276,7 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
             } else if (ttsType === 'lemonfox') {
                 const isEnglish = avatar.language === 'en' || avatar.language === 'en-US';
                 if (isEnglish) {
-                    // English avatars: use Lemonfox (native EN voices)
+                    // English avatars: Lemonfox native EN voice
                     const lemonfoxVoice = avatar.voiceConfig.lemonfoxVoiceId ?? 'sarah';
                     try {
                         await speakWithLemonfox({
@@ -268,13 +289,40 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                         await speakWithWebSpeech({ text: apiResponse.content, language: 'en-US' });
                     }
                 } else {
-                    // PT-BR and other languages: Web Speech API has genuine native voices
-                    // Chrome/Edge include 'Google português do Brasil' — real PT-BR accent
-                    await speakWithWebSpeech({
-                        text: apiResponse.content,
-                        language: avatar.language ?? 'pt-BR',
-                        preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
-                    });
+                    // PT-BR: first 10 responses use ElevenLabs, then Web Speech
+                    const currentlyUsed = getVoicesUsed(userId ?? null);
+                    if (currentlyUsed < FREE_VOICE_LIMIT && avatar.voiceConfig.elevenLabsVoiceId) {
+                        try {
+                            await speakWithElevenLabs({
+                                text: apiResponse.content,
+                                language: avatar.language,
+                                elevenLabsVoiceId: avatar.voiceConfig.elevenLabsVoiceId,
+                                elevenLabsModelId: avatar.voiceConfig.elevenLabsModelId,
+                                stability: avatar.voiceConfig.stability,
+                                similarityBoost: avatar.voiceConfig.similarityBoost,
+                            });
+                            const newCount = incrementVoicesUsed(userId ?? null);
+                            setVoicesUsed(newCount);
+                            const remaining = FREE_VOICE_LIMIT - newCount;
+                            if (remaining === 0) {
+                                warning(
+                                    '🎤 Suas 10 falas premium acabaram! Faça upgrade para Pro e tenha voz natural ilimitada.',
+                                    6000
+                                );
+                            } else if (remaining <= 3) {
+                                info(`⚠️ Apenas ${remaining} fala${remaining === 1 ? '' : 's'} premium restante${remaining === 1 ? '' : 's'}. Considere o Pro!`, 4000);
+                            }
+                        } catch {
+                            await speakWithWebSpeech({ text: apiResponse.content, language: avatar.language ?? 'pt-BR' });
+                        }
+                    } else {
+                        // Limit reached: Web Speech (free, PT-BR native in Chrome)
+                        await speakWithWebSpeech({
+                            text: apiResponse.content,
+                            language: avatar.language ?? 'pt-BR',
+                            preferFemale: avatar.voiceConfig.pitch ? avatar.voiceConfig.pitch > 1.0 : undefined,
+                        });
+                    }
                 }
             } else if (ttsType === 'google') {
                 await speakWithWebSpeech({
@@ -484,8 +532,8 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                                     <div className="bg-white dark:bg-slate-700 rounded-2xl rounded-tl-md p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-slate-600 flex items-center gap-2 sm:gap-3">
                                         <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
                                         <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">
-                                            <span className="hidden sm:inline">Professor está pensando...</span>
-                                            <span className="sm:hidden">Pensando...</span>
+                                            <span className="hidden sm:inline">{avatar.language === 'en' ? 'Teacher is thinking...' : 'Professor está pensando...'}</span>
+                                            <span className="sm:hidden">{avatar.language === 'en' ? 'Thinking...' : 'Pensando...'}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -537,6 +585,38 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                                 </Button>
                             </div>
                             
+                            {/* Free voice counter badge */}
+                            {planState.plan === 'free' && avatar.language !== 'en' && (() => {
+                                const remaining = FREE_VOICE_LIMIT - voicesUsed;
+                                if (remaining <= 0) return (
+                                    <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg flex items-center justify-between gap-2">
+                                        <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                                            🎤 Voz premium esgotada — usando voz gratuita do browser.
+                                        </p>
+                                        <button
+                                            onClick={() => window.location.href = '/planos'}
+                                            className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-2 py-1 rounded-lg hover:opacity-90 shrink-0"
+                                        >
+                                            <Crown className="w-3 h-3 inline mr-1" />Pro
+                                        </button>
+                                    </div>
+                                );
+                                if (remaining <= 5) return (
+                                    <div className="mt-2 p-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between gap-2">
+                                        <p className="text-xs text-blue-600 dark:text-blue-300">
+                                            🎤 <strong>{remaining}</strong> fala{remaining === 1 ? '' : 's'} premium restante{remaining === 1 ? '' : 's'}
+                                        </p>
+                                        <button
+                                            onClick={() => window.location.href = '/planos'}
+                                            className="text-xs text-blue-600 dark:text-blue-400 underline font-semibold shrink-0"
+                                        >
+                                            Upgrade Pro
+                                        </button>
+                                    </div>
+                                );
+                                return null;
+                            })()}
+
                             {/* Token exhausted warning */}
                             {!planState.canSendMessage && !planState.isPro && (
                                 <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-center">
@@ -570,7 +650,7 @@ export function ConversationInterface({ avatar, scenario, onBack, customSystemPr
                             <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-center gap-2 font-medium">
                                 <span>🎙️ <span className="hidden sm:inline">Voz IA Ativada</span><span className="sm:hidden">Voz IA</span></span>
                                 <span className="w-1 h-1 rounded-full bg-gray-400" />
-                                <span>📱 <span className="hidden sm:inline">Grave áudio ou digite</span><span className="sm:hidden">Áudio/Texto</span></span>
+                                <span>📱 <span className="hidden sm:inline">{avatar.language === 'en' ? 'Record audio or type' : 'Grave áudio ou digite'}</span><span className="sm:hidden">{avatar.language === 'en' ? 'Audio/Text' : 'Áudio/Texto'}</span></span>
                                 <span className="w-1 h-1 rounded-full bg-gray-400" />
                                 <span className="hidden sm:inline">⚙️ Selecione o microfone</span>
                                 <span className="sm:hidden">⚙️ Mic</span>
