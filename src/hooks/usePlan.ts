@@ -126,24 +126,34 @@ export function usePlan(userId: string | null): PlanState {
         };
     }, [userId]);
 
-    // ── Upgrade action ───────────────────────────────────────────────────
+    // ── Upgrade action — Hotmart ─────────────────────────────────────────
     const startUpgrade = useCallback(
         async (interval: 'month' | 'year' = 'month') => {
             if (!userId) {
-                // Guest – redirect to signup first
-                window.location.href = '/auth/signup?redirect=/planos';
+                console.warn('startUpgrade called without userId');
                 return;
             }
 
-            const res = await fetch('/api/stripe/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, interval }),
-            });
+            // Get user email to pre-fill Hotmart checkout
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            const email = authUser?.email ?? '';
 
-            const { url, error } = await res.json();
-            if (error) { alert(error); return; }
-            window.location.href = url;
+            const baseUrl =
+                interval === 'year'
+                    ? process.env.NEXT_PUBLIC_HOTMART_CHECKOUT_URL_YEAR
+                    : process.env.NEXT_PUBLIC_HOTMART_CHECKOUT_URL_MONTH;
+
+            if (!baseUrl) {
+                console.error('Hotmart checkout URL not configured. Set NEXT_PUBLIC_HOTMART_CHECKOUT_URL_MONTH/YEAR in .env');
+                alert('Checkout temporariamente indisponível. Tente novamente em breve.');
+                return;
+            }
+
+            const checkoutUrl = email
+                ? `${baseUrl}?checkoutEmail=${encodeURIComponent(email)}`
+                : baseUrl;
+
+            window.location.href = checkoutUrl;
         },
         [userId]
     );
